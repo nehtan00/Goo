@@ -1,5 +1,5 @@
 // =================================================================
-// Mythos Go - main.js (Floating Grid & Aggressive Piece Scaling)
+// Mythos Go - main.js (Final Visual Polish)
 // =================================================================
 
 // --- Constants ---
@@ -25,6 +25,7 @@ let boardMesh;
 let stoneModels = {};
 
 // --- Game State Variables ---
+// ... (game state variables remain the same) ...
 let board = [];
 let currentPlayer = 1;
 let gameMode = null;
@@ -132,9 +133,9 @@ function checkUrlForGameToJoin() {
 // =================================================================
 function initThreeJS() {
     gameContainer.innerHTML = ''; stoneModels = {};
-    scene = new THREE.Scene(); scene.background = new THREE.Color(0xdddddd); // Light grey background
+    scene = new THREE.Scene(); scene.background = new THREE.Color(0xdddddd); 
     camera = new THREE.PerspectiveCamera(45, gameContainer.clientWidth / gameContainer.clientHeight, 0.1, 1000);
-    camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.6, BOARD_SIZE * 1.4); // Adjusted camera
+    camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.6, BOARD_SIZE * 1.4); 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -142,14 +143,14 @@ function initThreeJS() {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2); controls.enableDamping = true;
     controls.dampingFactor = 0.05; controls.minDistance = BOARD_SIZE * 0.8; controls.maxDistance = BOARD_SIZE * 3;
-    controls.maxPolarAngle = Math.PI / 2 - 0.02; // Prevent going exactly horizontal or below
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x666666, 1.5); // Brighter hemisphere
+    controls.maxPolarAngle = Math.PI / 2 - 0.02; 
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x666666, 1.5); 
     hemiLight.position.set(0, 20, 0); scene.add(hemiLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);  // Brighter directional
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);  
     dirLight.position.set(10, 15, 12); dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; scene.add(dirLight);
     
-    createFloatingGridBoard(); // Changed to new board style
+    createFloatingGridBoard(); 
 
     raycaster = new THREE.Raycaster(); mouse = new THREE.Vector2();
     gameContainer.addEventListener('click', onBoardClick, false);
@@ -157,46 +158,71 @@ function initThreeJS() {
 }
 
 function createFloatingGridBoard() {
-    // Board Slab (Subtle, dark, semi-transparent)
-    const boardThickness = 0.5; 
-    const boardGeom = new THREE.BoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE);
+    const boardThickness = 0.6; 
+    const boardRadius = 0.2; 
+    const boardSegments = 5; 
+
+    let boardGeom;
+    // Check if THREE.RoundedBoxGeometry is loaded (it's a module, might not be global)
+    // For robustness, we'll check if the class THREE.RoundedBoxGeometry exists.
+    // If not, fallback to BoxGeometry.
+    if (typeof THREE.RoundedBoxGeometry === 'function') {
+        boardGeom = new THREE.RoundedBoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
+    } else {
+        console.warn("THREE.RoundedBoxGeometry not found or not loaded as a global, using BoxGeometry as fallback.");
+        boardGeom = new THREE.BoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE);
+    }
+    
     const boardMat = new THREE.MeshStandardMaterial({ 
-        color: 0x1a1a1a, // Dark grey/charcoal
+        color: 0x2c2c2c, 
         transparent: true,
-        opacity: 0.35, // Quite transparent to give "hollow" feel
-        roughness: 0.8,
+        opacity: 0.6, 
+        roughness: 0.7,
         metalness: 0.1
     });
     boardMesh = new THREE.Mesh(boardGeom, boardMat);
-    // Position so its top surface is at y=0
     boardMesh.position.set((BOARD_SIZE - 1) / 2, -boardThickness / 2, (BOARD_SIZE - 1) / 2);
-    boardMesh.receiveShadow = true; // It can receive shadows from pieces
+    boardMesh.receiveShadow = true; 
     scene.add(boardMesh);
 
-    // Grid Lines (will appear to float above the subtle slab)
-    const gridLineMaterial = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.6 });
-    const gridLineY = 0.02; // Position lines slightly above the slab's top surface
-    
-    for (let i = 0; i < BOARD_SIZE; i++) {
-        // Horizontal lines
-        let pointsH = [new THREE.Vector3(0, gridLineY, i), new THREE.Vector3(BOARD_SIZE - 1, gridLineY, i)];
-        let geomH = new THREE.BufferGeometry().setFromPoints(pointsH);
-        scene.add(new THREE.Line(geomH, gridLineMaterial));
-        
-        // Vertical lines
-        let pointsV = [new THREE.Vector3(i, gridLineY, 0), new THREE.Vector3(i, gridLineY, BOARD_SIZE - 1)];
-        let geomV = new THREE.BufferGeometry().setFromPoints(pointsV);
-        scene.add(new THREE.Line(geomV, gridLineMaterial));
-    }
+    drawBoardGridLines(boardThickness); 
 }
 
-function addStoneTo3DScene(x, z, player) { // x, z are grid coordinates (0-8)
+function drawBoardGridLines(boardCurrentThickness) {
+    const lineThickness = 0.035; // Slightly thicker grid lines
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0 }); // Darker, less shiny
+    
+    // Y position for lines, ensuring they are on top of the board slab
+    // The board's top surface is at y=0 (since its center is at -boardThickness/2 and height is boardThickness)
+    // So lines should be slightly above y=0.
+    const lineY = 0.01; 
+    
+    const gridLinesGroup = new THREE.Group(); // Group lines to add them to boardMesh later if needed, or directly to scene
+    
+    for (let i = 0; i < BOARD_SIZE; i++) {
+        // Horizontal lines (along Z axis)
+        const hGeom = new THREE.BoxGeometry(BOARD_SIZE, lineThickness, lineThickness);
+        const hLine = new THREE.Mesh(hGeom, gridLineMaterial);
+        // Position relative to board center, then place at grid line position
+        hLine.position.set((BOARD_SIZE - 1) / 2, lineY, i); 
+        gridLinesGroup.add(hLine);
+
+        // Vertical lines (along X axis)
+        const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, BOARD_SIZE);
+        const vLine = new THREE.Mesh(vGeom, gridLineMaterial);
+        vLine.position.set(i, lineY, (BOARD_SIZE - 1) / 2);
+        gridLinesGroup.add(vLine);
+    }
+    scene.add(gridLinesGroup); // Add lines directly to scene
+}
+
+function addStoneTo3DScene(x, z, player) { 
     const key = `${x}-${z}`; if (stoneModels[key]) return;
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
-    const pieceBaseScaleMultiplier = 0.95; // **AGGRESSIVE SCALING**
-    const pieceYOnBoard = 0.05; // **FINAL Y for piece base: just above grid lines**
+    const pieceBaseScaleMultiplier = 1.25; 
+    const pieceYOnBoard = 0.05; // Y for piece base, slightly above grid lines (at 0.01)
 
     const loader = new THREE.GLTFLoader();
     loader.load(modelPath, gltf => {
@@ -207,24 +233,20 @@ function addStoneTo3DScene(x, z, player) { // x, z are grid coordinates (0-8)
         
         if (maxDim === 0) { console.error("Loaded model has zero dimensions:", modelPath); return; }
         
-        const scaleFactor = (0.85 / maxDim) * pieceBaseScaleMultiplier; // 0.85 so it's slightly within grid cell
+        const desiredVisualSize = 0.8 * pieceBaseScaleMultiplier;
+        const scaleFactor = desiredVisualSize / maxDim;
         model.scale.set(scaleFactor, scaleFactor, scaleFactor);
         
         const newBox = new THREE.Box3().setFromObject(model);
-        // Shift model so its visual base (min.y of bounding box) aligns with its local y=0 origin
+        
+        // Shift model so its visual base (min.y of bounding box) aligns with its local y=0
         model.position.y -= newBox.min.y; 
-        // Any other centering needed (x,z) if model's origin isn't at its visual center
-        // model.position.x -= newBox.getCenter(new THREE.Vector3()).x; 
-        // model.position.z -= newBox.getCenter(new THREE.Vector3()).z;
+        
+        // Set world position for animation start (current x and z are grid coords 0-8)
+        const animationStartY = pieceYOnBoard + 2.0; 
+        model.position.set(x, animationStartY, z); 
 
-
-        // Initial animation position (higher up)
-        const animationStartY = pieceYOnBoard + 2.5; 
-        model.position.set(x, animationStartY, z); // Set world position
-
-
-        console.log(`Piece: ${settings.piece}, Grid(${x},${z}), Scale: ${model.scale.x.toFixed(2)}, StartY: ${model.position.y.toFixed(2)}, TargetY: ${pieceYOnBoard}`);
-
+        console.log(`Piece: ${settings.piece} at grid(${x},${z}). BBox MinY After Shift: ${newBox.min.y.toFixed(3)}, MaxY: ${newBox.max.y.toFixed(3)}, Height: ${(newBox.max.y - newBox.min.y).toFixed(3)}. Final Scale: ${model.scale.x.toFixed(2)}. Anim StartY: ${model.position.y.toFixed(2)}, TargetY: ${pieceYOnBoard}`);
 
         model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true;
             child.material = new THREE.MeshStandardMaterial({
@@ -236,7 +258,7 @@ function addStoneTo3DScene(x, z, player) { // x, z are grid coordinates (0-8)
         scene.add(model); stoneModels[key] = model;
         
         let currentY = model.position.y; 
-        const targetY = pieceYOnBoard; // Final Y position on board (base of model at this Y)
+        const targetY = pieceYOnBoard; 
         const dropSpeed = 0.12; 
 
         function animateDrop() { 
@@ -268,17 +290,22 @@ function removeStoneFrom3DScene(x, z) {
     const key = `${x}-${z}`; 
     const model = stoneModels[key];
     if (model) {
-        const duration = 350; // Slightly longer animation
-        const startTime = Date.now();
-        const originalScale = model.scale.x; 
+        const duration = 350; const startTime = Date.now();
+        const originalScaleX = model.scale.x; 
+        const originalScaleY = model.scale.y; 
+        const originalScaleZ = model.scale.z; 
         const startY = model.position.y;
 
         function animateCapture() {
             const elapsedTime = Date.now() - startTime;
             const progress = Math.min(elapsedTime / duration, 1); 
             
-            model.position.y = startY + progress * 0.8; // Move up more
-            model.scale.setScalar(originalScale * (1 - progress * progress)); // Shrink with ease-in
+            model.position.y = startY + progress * 0.7; 
+            model.scale.set(
+                originalScaleX * (1 - progress * progress),
+                originalScaleY * (1 - progress * progress),
+                originalScaleZ * (1 - progress * progress)
+            );
 
             model.traverse(child => {
                 if (child.isMesh && child.material) {
@@ -318,7 +345,7 @@ function onWindowResize() {
 }
 
 // =================================================================
-// Go Game Logic (Unchanged)
+// Go Game Logic
 // =================================================================
 function getNeighbors(row, col) {
     const neighbors = [];
@@ -387,7 +414,7 @@ function findGroup(startRow, startCol, boardState) {
 }
 
 // =================================================================
-// AI Logic (Unchanged)
+// AI Logic
 // =================================================================
 function getAIMove() { 
     let bestScore = -Infinity; let bestMoves = []; const availableMoves = [];
@@ -432,7 +459,7 @@ function getAIMove() {
 }
 
 // =================================================================
-// Game Flow & UI (Unchanged)
+// Game Flow & UI
 // =================================================================
 function resetGame() {
     if (unsubscribeGameListener) unsubscribeGameListener();

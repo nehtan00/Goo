@@ -268,27 +268,28 @@ footer {
 
 .close-button {
     position: absolute;
-    top: 10px; /* Distance from the top of the modal content area */
-    right: 15px; /* Distance from the right of the modal content area */
-    font-size: 2.8rem; /* INCREASED for more prominence */
+    top: 18px;           /* Move further from the top for prominence */
+    right: 22px;         /* Move further from the right for prominence */
+    font-size: 3.2rem;   /* Even larger for high visibility */
     font-weight: bold;
-    color: #888; /* Slightly darker grey for better visibility */
+    color: #c0392b;      /* Strong red for attention */
     background: none !important; 
     border: none !important; 
     box-shadow: none !important; 
-    padding: 0 5px; /* Added a little padding to increase clickable area slightly */
+    padding: 0 10px;     /* Larger clickable area */
     line-height: 1;
     cursor: pointer;
-    transform: none !important;
-    z-index: 10; /* Ensure it's above other modal content if there's overlap */
-    transition: color 0.2s ease-in-out; /* Smooth color change on hover */
+    z-index: 20;         /* Ensure it's above modal content */
+    transition: color 0.2s, background 0.2s;
+    border-radius: 50%;
+    outline: none;
+    background-color: rgba(255,255,255,0.7); /* Subtle white background for contrast */
 }
 
 .close-button:hover {
-    color: #000000 !important; /* Black on hover for very clear indication */
-    background: none !important;
-    transform: none !important;
-    box-shadow: none !important;
+    color: #fff !important;
+    background: #c0392b !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 .setup-section, .rules-section, .strategy-section {border-top: 1px solid #e0e0e0; padding-top: 20px; margin-top: 20px;}
 .setup-section:first-of-type, .rules-section:first-of-type { border-top: none; }

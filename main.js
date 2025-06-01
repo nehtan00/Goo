@@ -15,7 +15,7 @@ const BOARD_SIZE = 9;
 const PIECE_MODEL_PATHS = {
     'Achilles': 'assets/achilles.glb',
     'War Elephant': 'assets/war_elephant.glb',
-    'Knight Horse': 'assets/knight_horse.glb',
+    'Valkyrie': 'assets/valkyrie.glb',
     'Aztec': 'assets/aztec.glb'
 };
 const DEFAULT_PIECE_KEY = 'Achilles';

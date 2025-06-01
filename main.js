@@ -1,5 +1,5 @@
 // =================================================================
-// Mythos Go - main.js (Enhanced Piece Visuals & Animations)
+// Mythos Go - main.js (Further Piece Scaling & Positioning)
 // =================================================================
 
 // --- Constants ---
@@ -157,33 +157,42 @@ function createMarbleBoard3D() {
     const textureLoader = new THREE.TextureLoader();
     const marbleTexture = textureLoader.load('https://cdn.polyhaven.com/asset_img/primary/marble_01.png?height=1024',
         () => { if(renderer && scene && camera) renderer.render(scene, camera); }, undefined,
-        () => { console.warn("Failed to load primary marble texture, using fallback.");
+        (err) => { 
+            console.warn("Failed to load primary marble texture, using fallback. Error:", err);
             const fallbackTexture = textureLoader.load(FALLBACK_MARBLE_TEXTURE_URL);
             fallbackTexture.wrapS = fallbackTexture.wrapT = THREE.RepeatWrapping; fallbackTexture.repeat.set(3, 3);
             if (boardMesh) { boardMesh.material.map = fallbackTexture; boardMesh.material.needsUpdate = true; }
         });
-    marbleTexture.wrapS = marbleTexture.wrapT = THREE.RepeatWrapping; marbleTexture.repeat.set(2, 2);
+    marbleTexture.wrapS = marbleTexture.wrapT = THREE.RepeatWrapping;
+    marbleTexture.repeat.set(2, 2); 
+    marbleTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
     const boardThickness = 0.8; const boardGeom = new THREE.BoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE);
-    const boardMat = new THREE.MeshStandardMaterial({ map: marbleTexture, roughness: 0.6, metalness: 0.1 });
+    const boardMat = new THREE.MeshStandardMaterial({ 
+        map: marbleTexture, 
+        roughness: 0.4, 
+        metalness: 0.05 
+    });
     boardMesh = new THREE.Mesh(boardGeom, boardMat);
     boardMesh.position.set((BOARD_SIZE - 1) / 2, -boardThickness / 2, (BOARD_SIZE - 1) / 2);
     boardMesh.receiveShadow = true; scene.add(boardMesh);
 }
 function drawBoardGridLines() {
-    const material = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 });
-    const lineY = 0.01; // Position lines on top surface of the board slab
+    const material = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 }); 
+    const lineY = 0.01; // Lines on top surface of the board slab
     for (let i = 0; i < BOARD_SIZE; i++) {
         scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, lineY, i), new THREE.Vector3(BOARD_SIZE - 1, lineY, i)]), material));
         scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(i, lineY, 0), new THREE.Vector3(i, lineY, BOARD_SIZE - 1)]), material));
     }
 }
-function addStoneTo3DScene(x, z, player) { // x, z are grid coordinates
+
+function addStoneTo3DScene(x, z, player) { // x, z are grid coordinates (0-8)
     const key = `${x}-${z}`; if (stoneModels[key]) return;
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
-    const pieceBaseScaleMultiplier = 0.7; // **SCALING ADJUSTMENT:** Increase this for larger pieces
-    const pieceYOnBoard = 0.05; // **POSITIONING ADJUSTMENT:** Y pos when ON the board (slightly above lines)
+    const pieceBaseScaleMultiplier = 0.85; // **SCALING INCREASED**
+    const pieceYOnBoard = 0.02;    // **POSITIONING ADJUSTMENT:** Y pos when ON the board (very slightly above lines)
 
     const loader = new THREE.GLTFLoader();
     loader.load(modelPath, gltf => {
@@ -192,35 +201,52 @@ function addStoneTo3DScene(x, z, player) { // x, z are grid coordinates
         const size = box.getSize(new THREE.Vector3()); 
         const maxDim = Math.max(size.x, size.y, size.z);
         
-        const scaleFactor = (0.85 / maxDim) * pieceBaseScaleMultiplier; // 0.85 for piece to be slightly smaller than grid cell
+        // Ensure maxDim is not zero to avoid division by zero if model is empty
+        if (maxDim === 0) {
+            console.error("Loaded model has zero dimensions:", modelPath);
+            return; // Don't add empty models
+        }
+        
+        const scaleFactor = (0.9 / maxDim) * pieceBaseScaleMultiplier; 
         model.scale.set(scaleFactor, scaleFactor, scaleFactor);
         
+        // Re-calculate bounding box *after* scaling
         const newBox = new THREE.Box3().setFromObject(model);
         const center = newBox.getCenter(new THREE.Vector3());
-        model.position.x -= center.x; 
-        model.position.y -= newBox.min.y; // Base of model at y=0 in its local space
-        model.position.z -= center.z;
+        
+        // Shift model so its *visual base* aligns with its local y=0
+        // This assumes the model is generally upright.
+        model.position.y -= newBox.min.y; 
+        
+        // Now shift the whole model (which has its base at its local y=0)
+        // so this local y=0 point is at world x, z, and slightly above board for animation start
+        model.position.x = x - center.x + ((BOARD_SIZE -1) /2 - x) * (1-1) ; // This keeps it at x
+        model.position.z = z - center.z + ((BOARD_SIZE -1) /2 - z) * (1-1) ; // This keeps it at z
 
         // Initial animation position (higher up)
-        model.position.set(x, pieceYOnBoard + 2.0, z); // Start higher for a more noticeable drop
+        const animationStartY = pieceYOnBoard + 2.5; // Start higher
+        model.position.y += animationStartY; // Add to current y (which is now base-aligned)
+
+
+        console.log(`Placing piece: ${settings.piece} at grid(${x},${z}). Final model scale: ${model.scale.x.toFixed(2)}. Start Y: ${model.position.y.toFixed(2)}`);
+
 
         model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true;
-            // **COLOR FIX:** Ensure MeshStandardMaterial is used and color is applied
             child.material = new THREE.MeshStandardMaterial({
-                color: new THREE.Color(settings.color), // Use THREE.Color for hex strings
-                roughness: 0.4, 
-                metalness: 0.15
+                color: new THREE.Color(settings.color), 
+                roughness: 0.3, 
+                metalness: 0.2 
             }); 
         }});
         scene.add(model); stoneModels[key] = model;
         
         let currentY = model.position.y; 
-        const targetY = pieceYOnBoard; // Final Y position on board
-        const dropSpeed = 0.12; // Adjusted speed for smoother drop
+        const targetY = pieceYOnBoard; // Final Y position for the model's base
+        const dropSpeed = 0.12; 
 
         function animateDrop() { 
             if (currentY > targetY) { 
-                currentY -= dropSpeed * Math.max(0.5, (currentY - targetY)); // Smoother easing
+                currentY -= dropSpeed * Math.max(0.5, (currentY - targetY));
                 model.position.y = Math.max(currentY, targetY); 
                 requestAnimationFrame(animateDrop); 
             } else model.position.y = targetY; 
@@ -247,35 +273,26 @@ function removeStoneFrom3DScene(x, z) {
     const key = `${x}-${z}`; 
     const model = stoneModels[key];
     if (model) {
-        const duration = 300; // milliseconds for animation
-        const startTime = Date.now();
+        const duration = 300; const startTime = Date.now();
+        const originalScale = model.scale.x; // Assuming uniform scale
 
         function animateCapture() {
             const elapsedTime = Date.now() - startTime;
-            const progress = Math.min(elapsedTime / duration, 1); // 0 to 1
+            const progress = Math.min(elapsedTime / duration, 1); 
+            
+            model.position.y = (pieceYOnBoard + progress * 0.7); // Move up more noticeably
+            model.scale.setScalar(originalScale * (1 - progress)); 
 
-            model.position.y = (0.1 + progress * 0.5); // Move up slightly
-            model.scale.setScalar(0.55 * (1 - progress)); // Shrink
-
-            // Fade out (if material is standard and allows transparency)
             model.traverse(child => {
                 if (child.isMesh && child.material) {
-                    if (!child.material.userData) child.material.userData = {}; // Ensure userData exists
-                    if (child.material.userData.originalOpacity === undefined) {
-                        child.material.userData.originalOpacity = child.material.opacity;
-                    }
+                    if (!child.material.userData) child.material.userData = {}; 
+                    if (child.material.userData.originalOpacity === undefined) child.material.userData.originalOpacity = child.material.opacity !== undefined ? child.material.opacity : 1;
                     child.material.transparent = true;
                     child.material.opacity = child.material.userData.originalOpacity * (1 - progress);
                 }
             });
-
-            if (progress < 1) {
-                requestAnimationFrame(animateCapture);
-            } else {
-                scene.remove(model);
-                // Optionally dispose of geometry/material here if memory becomes an issue
-                delete stoneModels[key];
-            }
+            if (progress < 1) requestAnimationFrame(animateCapture);
+            else { scene.remove(model); delete stoneModels[key]; }
         }
         animateCapture();
     }
@@ -320,10 +337,10 @@ function makeActualMove(row, col, player) {
     if (simulationResult === null) return null; 
     board = simulationResult.newBoard; 
     if (simulationResult.captures.length > 0) {
-        let boardBeforeThisMove = board.map(r => r.slice());
-        boardBeforeThisMove[row][col] = 0; 
-        simulationResult.captures.forEach(s => boardBeforeThisMove[s.row][s.col] = player === 1 ? 2 : 1); 
-        koState = boardBeforeThisMove.map(r=>r.join('')).join('');
+        let boardStateBeforeThisMove = board.map(r => r.slice()); 
+        boardStateBeforeThisMove[row][col] = 0; 
+        simulationResult.captures.forEach(s => boardStateBeforeThisMove[s.row][s.col] = player === 1 ? 2 : 1); 
+        koState = boardStateBeforeThisMove.map(r=>r.join('')).join('');
     } else koState = null;
     return simulationResult.captures; 
 }

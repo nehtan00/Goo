@@ -1,16 +1,14 @@
 // =================================================================
-// Mythos Go - main.js (Aggressive Logging & Module Import Fix)
+// Mythos Go - main.js (Final Board Texture & Piece Polish)
 // =================================================================
-console.log("main.js: SCRIPT EXECUTION STARTED (TOP OF FILE). If you see this, the browser is reading the file.");
 
 // --- ES6 Module Imports ---
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'; // Direct import
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'; 
 
-console.log("main.js: THREE.js core and addons imported.");
-
+console.log("main.js: SCRIPT EXECUTION STARTED (TOP OF FILE).");
 
 // --- Constants ---
 const BOARD_SIZE = 9;
@@ -21,20 +19,27 @@ const PIECE_MODEL_PATHS = {
     'Aztec': 'assets/aztec.glb'
 };
 const DEFAULT_PIECE_KEY = 'Achilles';
+// **YOUR NEW BOARD TEXTURE PATH**
+const BOARD_TEXTURE_PATH = 'assets/dark_marble_texture.jpg'; // Make sure this file exists!
 
 // --- Global DOM Element Variables ---
+// ... (declarations remain the same)
 let gameContainer, statusText, turnText, player1CapturesText, player2CapturesText;
 let newGameButton, joinGameButton, passTurnButton, rulesStrategyButton;
 let gameSetupModal, joinGameModal, shareGameModal, rulesStrategyModal;
 let playerColorInput, playerPieceSelect, difficultySelect;
 let startAiGameButton, createMultGameButton, joinGameCodeInput, joinMultGameButton;
 
+
 // --- Three.js Variables ---
+// ... (declarations remain the same)
 let scene, camera, renderer, raycaster, mouse, controls;
 let boardMesh; 
 let stoneModels = {};
 
+
 // --- Game State Variables ---
+// ... (declarations remain the same)
 let board = [];
 let currentPlayer = 1;
 let gameMode = null;
@@ -50,10 +55,9 @@ let koState = null;
 let player1Settings = { uid: null, color: '#222222', piece: DEFAULT_PIECE_KEY };
 let player2Settings = { uid: null, color: '#FFFFFF', piece: DEFAULT_PIECE_KEY };
 
-console.log("main.js: Global variables declared.");
 
 // =================================================================
-// Initial Setup: DOMContentLoaded ensures HTML is ready
+// Initial Setup
 // =================================================================
 document.addEventListener('DOMContentLoaded', () => {
     console.log("main.js: DOMContentLoaded event FIRED.");
@@ -71,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function assignDOMElements() {
+    // ... (assignDOMElements function remains the same)
     console.log("main.js: assignDOMElements() CALLED.");
     gameContainer = document.getElementById('game-container');
     statusText = document.getElementById('status-text');
@@ -94,17 +99,16 @@ function assignDOMElements() {
     joinMultGameButton = document.getElementById('join-mult-game-button');
     
     if (!newGameButton) console.error("main.js: newGameButton NOT FOUND in assignDOMElements!");
-    else console.log("main.js: newGameButton FOUND.");
     if (!gameContainer) console.error("main.js: gameContainer NOT FOUND in assignDOMElements!");
-    else console.log("main.js: gameContainer FOUND.");
     console.log("main.js: assignDOMElements() FINISHED.");
 }
 
 function initEventListeners() {
+    // ... (initEventListeners function remains the same)
     console.log("main.js: initEventListeners() CALLED.");
-    if (newGameButton) newGameButton.addEventListener('click', () => openModal(gameSetupModal)); else console.error("New Game button not found for listener.");
-    if (joinGameButton) joinGameButton.addEventListener('click', () => openModal(joinGameModal)); else console.error("Join Game button not found for listener.");
-    if (rulesStrategyButton) rulesStrategyButton.addEventListener('click', () => openModal(rulesStrategyModal)); else console.error("Rules button not found for listener.");
+    if (newGameButton) newGameButton.addEventListener('click', () => { console.log("New Game button CLICKED"); openModal(gameSetupModal); }); else console.error("New Game button not found for listener.");
+    if (joinGameButton) joinGameButton.addEventListener('click', () => { console.log("Join Game button CLICKED"); openModal(joinGameModal); }); else console.error("Join Game button not found for listener.");
+    if (rulesStrategyButton) rulesStrategyButton.addEventListener('click', () => { console.log("Rules button CLICKED"); openModal(rulesStrategyModal); }); else console.error("Rules button not found for listener.");
     if (passTurnButton) passTurnButton.addEventListener('click', handlePassTurn); else console.error("Pass Turn button not found for listener.");
     
     document.querySelectorAll('.close-button').forEach(button => {
@@ -137,9 +141,8 @@ function initEventListeners() {
 }
 
 function waitForAuthAndSetupUI() {
+    // ... (waitForAuthAndSetupUI function remains the same)
     console.log("main.js: waitForAuthAndSetupUI() CALLED.");
-    // Firebase 'auth' and 'db' should be globally available from firebase.js
-    // Ensure firebase.js has loaded and initialized 'auth' before this script (module) runs.
     if (typeof auth !== 'undefined' && auth) { 
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -147,7 +150,6 @@ function waitForAuthAndSetupUI() {
                 checkUrlForGameToJoin();
                 console.log("main.js: User authenticated, UID:", user.uid);
             } else {
-                 // This might be called initially before anonymous sign-in completes.
                  console.log("main.js: User is signed out or anonymous sign-in pending in onAuthStateChanged.");
             }
         });
@@ -158,6 +160,7 @@ function waitForAuthAndSetupUI() {
 }
 
 function checkUrlForGameToJoin() {
+    // ... (checkUrlForGameToJoin function remains the same)
     console.log("main.js: checkUrlForGameToJoin() called.");
     const urlParams = new URLSearchParams(window.location.search);
     const gameIdFromUrl = urlParams.get('game');
@@ -174,23 +177,22 @@ function checkUrlForGameToJoin() {
 function initThreeJS() {
     console.log("main.js: initThreeJS() CALLED.");
     if (!gameContainer) { console.error("main.js: gameContainer not found for Three.js."); return; }
-    // ... (rest of initThreeJS as previously provided) ...
     gameContainer.innerHTML = ''; stoneModels = {};
-    scene = new THREE.Scene(); scene.background = new THREE.Color(0xdddddd); 
+    scene = new THREE.Scene(); scene.background = new THREE.Color(0xcccccc); // Slightly lighter grey background
     camera = new THREE.PerspectiveCamera(45, gameContainer.clientWidth / gameContainer.clientHeight, 0.1, 1000);
-    camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.6, BOARD_SIZE * 1.4); 
+    camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.5, BOARD_SIZE * 1.5); // Adjusted for better view
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     gameContainer.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement); 
     controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2); controls.enableDamping = true;
-    controls.dampingFactor = 0.05; controls.minDistance = BOARD_SIZE * 0.8; controls.maxDistance = BOARD_SIZE * 3;
-    controls.maxPolarAngle = Math.PI / 2 - 0.02; 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x666666, 1.5); 
+    controls.dampingFactor = 0.05; controls.minDistance = BOARD_SIZE * 0.7; controls.maxDistance = BOARD_SIZE * 2.5;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05; 
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.8); // Slightly stronger hemisphere
     hemiLight.position.set(0, 20, 0); scene.add(hemiLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);  
-    dirLight.position.set(10, 15, 12); dirLight.castShadow = true;
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);  // Stronger directional
+    dirLight.position.set(8, 12, 10); dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; scene.add(dirLight);
     
     createFloatingGridBoard(); 
@@ -202,66 +204,82 @@ function initThreeJS() {
 
 function createFloatingGridBoard() {
     console.log("main.js: createFloatingGridBoard() called.");
-    const boardThickness = 0.5; 
-    const boardRadius = 0.3; 
-    const boardSegments = 6; 
+    const boardThickness = 0.4; // Thinner slab for floating effect
+    const boardRadius = 0.25; 
+    const boardSegments = 5; 
 
     let boardGeom;
-    // Use the directly imported RoundedBoxGeometry from the top of the file
     if (RoundedBoxGeometry) { 
         boardGeom = new RoundedBoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
         console.log("main.js: Using imported RoundedBoxGeometry for board.");
     } else {
-        console.warn("main.js: RoundedBoxGeometry was not imported successfully, using BoxGeometry for board.");
+        console.warn("main.js: RoundedBoxGeometry class not available, using BoxGeometry for board.");
         boardGeom = new THREE.BoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE);
     }
     
+    const textureLoader = new THREE.TextureLoader();
+    const boardTexture = textureLoader.load(BOARD_TEXTURE_PATH, 
+        () => { if(renderer && scene && camera) renderer.render(scene, camera); }, 
+        undefined,
+        (err) => { console.error(`Failed to load board texture: ${BOARD_TEXTURE_PATH}`, err); }
+    );
+    boardTexture.wrapS = boardTexture.wrapT = THREE.RepeatWrapping;
+    boardTexture.repeat.set(1, 1); // Adjust if texture needs tiling
+    boardTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
     const boardMat = new THREE.MeshStandardMaterial({ 
-        color: 0x2a2a2a, 
-        transparent: true,
-        opacity: 0.45, 
-        roughness: 0.8,
-        metalness: 0.05
+        map: boardTexture,
+        // color: 0x333333, // Fallback color if texture fails, or keep to tint
+        roughness: 0.7,
+        metalness: 0.1,
+        // transparent: true, // Make transparent if you want "floating lines only" look
+        // opacity: 0.6 
     });
     boardMesh = new THREE.Mesh(boardGeom, boardMat);
+    // Position board so its top surface is at y=0 in world space
     boardMesh.position.set((BOARD_SIZE - 1) / 2, -boardThickness / 2, (BOARD_SIZE - 1) / 2);
     boardMesh.receiveShadow = true; 
     scene.add(boardMesh);
 
-    drawBoardGridLines(boardThickness); 
+    drawBoardGridLines(); 
 }
 
-function drawBoardGridLines(boardCurrentThickness) {
-    // ... (drawBoardGridLines as previously provided) ...
-    const lineThickness = 0.04; 
-    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0 }); 
-    const lineY = 0.015; 
+function drawBoardGridLines() {
+    const lineThickness = 0.045; // **THICKER GRID LINES**
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.8, metalness: 0.0 }); 
+    const lineY = 0.01; // Position lines on top surface of the board (which is at y=0)
     
     const gridLinesGroup = new THREE.Group();
+    // The board's top surface is at Y=0 in world coordinates. Lines are placed relative to this.
+    gridLinesGroup.position.y = lineY; // Lift the whole group slightly
         
     for (let i = 0; i < BOARD_SIZE; i++) {
-        const hGeom = new THREE.BoxGeometry(BOARD_SIZE - 0.05, lineThickness, lineThickness);
+        // Horizontal lines (along Z axis) - length should be BOARD_SIZE
+        const hGeom = new THREE.BoxGeometry(BOARD_SIZE, lineThickness, lineThickness);
         const hLine = new THREE.Mesh(hGeom, gridLineMaterial);
-        hLine.position.set((BOARD_SIZE -1) / 2, lineY, i); 
+        hLine.position.set((BOARD_SIZE -1) / 2, 0, i); // Position relative to grid group
         gridLinesGroup.add(hLine);
 
-        const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, BOARD_SIZE - 0.05);
-        const vLine = new THREE.Mesh(vGeom, gridLineMaterial);
-        vLine.position.set(i, lineY, (BOARD_SIZE -1) / 2);
-        gridLinesGroup.add(vLine);
+        // Vertical lines (along X axis) - length should be BOARD_SIZE
+        // We avoid creating a mesh for i=0 and i=BOARD_SIZE-1 if they are just edges for vertical lines
+        if (i < BOARD_SIZE) { // Avoid extra line at the very edge if lines mark intersections
+            const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, BOARD_SIZE);
+            const vLine = new THREE.Mesh(vGeom, gridLineMaterial);
+            vLine.position.set(i, 0, (BOARD_SIZE -1) / 2);
+            gridLinesGroup.add(vLine);
+        }
     }
     scene.add(gridLinesGroup);
 }
 
 
 function addStoneTo3DScene(x, z, player) { 
-    // ... (addStoneTo3DScene unchanged from "Further Piece Scaling & Positioning" version) ...
     const key = `${x}-${z}`; if (stoneModels[key]) return;
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
-    const pieceBaseScaleMultiplier = 1.85; 
-    const pieceYOnBoard = 0.85;    
+    const pieceBaseScaleMultiplier = 1.6; // **AGGRESSIVELY LARGER PIECES**
+    const pieceYOnBoard = 0.85;    // **FINAL Y for piece base, clearly on top of grid lines**
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {
@@ -272,60 +290,68 @@ function addStoneTo3DScene(x, z, player) {
         
         if (maxDim === 0) { console.error("Loaded model has zero dimensions:", modelPath); return; }
         
-        const desiredVisualSize = 0.75 * pieceBaseScaleMultiplier;
-        const scaleFactor = desiredVisualSize / maxDim;
+        // Aim for pieces to occupy a good portion of the grid cell
+        const desiredVisualGridCoverage = 0.70; // Piece covers 70% of the grid cell width/depth
+        const scaleFactor = (desiredVisualGridCoverage / maxDim) * pieceBaseScaleMultiplier;
         model.scale.set(scaleFactor, scaleFactor, scaleFactor);
         
+        // After scaling, get new bounding box to align base
         const newBox = new THREE.Box3().setFromObject(model);
+        
+        // Shift model so its visual base (min.y of bounding box after scaling) aligns with its local y=0
         model.position.y -= newBox.min.y; 
         
-        const animationStartY = pieceYOnBoard + 2.0; 
+        // Initial animation position (higher up)
+        const animationStartY = pieceYOnBoard + 1.5; // Start a bit lower for faster perceived drop
         model.position.set(x, animationStartY, z); 
 
-        // console.log(`Piece: ${settings.piece} at grid(${x},${z}). Model Height After Scale: ${(newBox.max.y - newBox.min.y).toFixed(3)}. Final Scale: ${model.scale.x.toFixed(2)}. Anim Start Y: ${model.position.y.toFixed(2)}, TargetY: ${pieceYOnBoard}`);
+        // console.log(`Piece: ${settings.piece} Grid(${x},${z}) BBox MinY (post-align): ${newBox.min.y.toFixed(3)} Model Local Y: ${model.position.y.toFixed(3)} Target World Y: ${pieceYOnBoard}`);
 
         model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true;
             child.material = new THREE.MeshStandardMaterial({
                 color: new THREE.Color(settings.color), 
-                roughness: 0.25, metalness: 0.25 }); 
+                roughness: 0.2, // More polished
+                metalness: 0.3  // More metallic
+            }); 
         }});
         scene.add(model); stoneModels[key] = model;
         
         let currentY = model.position.y; 
         const targetY = pieceYOnBoard; 
-        const dropSpeed = 0.10; 
+        const dropSpeed = 0.15; // Slightly faster drop
 
         function animateDrop() { 
             if (currentY > targetY) { 
-                currentY -= dropSpeed * Math.max(0.3, (currentY - targetY));
+                currentY -= dropSpeed * Math.max(0.2, (currentY - targetY)); // Adjusted easing
                 model.position.y = Math.max(currentY, targetY); 
                 requestAnimationFrame(animateDrop); 
             } else model.position.y = targetY; 
         }
         animateDrop();
     }, undefined, error => { console.error(`Model load error for ${modelPath}:`, error);
+        // Fallback piece logic
         const stoneRadius = 0.3 * pieceBaseScaleMultiplier; 
         const stoneHeight = 0.1 * pieceBaseScaleMultiplier;
         const geom = new THREE.CylinderGeometry(stoneRadius, stoneRadius, stoneHeight, 24);
         const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(settings.color), roughness: 0.5, metalness: 0.1 });
         const piece = new THREE.Mesh(geom, mat); piece.castShadow = true; 
-        piece.position.set(x, pieceYOnBoard + 2.0, z);
+        piece.position.set(x, pieceYOnBoard + 1.5, z);
         scene.add(piece); stoneModels[key] = piece;
         
         let currentY = piece.position.y; const targetY = pieceYOnBoard + stoneHeight/2; 
-        const dropSpeed = 0.10;
-        function animateDropFallback() { if (currentY > targetY) { currentY -= dropSpeed * Math.max(0.3, (currentY - targetY));
+        const dropSpeed = 0.15;
+        function animateDropFallback() { if (currentY > targetY) { currentY -= dropSpeed * Math.max(0.2, (currentY - targetY));
             piece.position.y = Math.max(currentY, targetY); requestAnimationFrame(animateDropFallback); } else piece.position.y = targetY; }
         animateDropFallback();
     });
 }
 
 function removeStoneFrom3DScene(x, z) {
-    // ... (removeStoneFrom3DScene unchanged) ...
     const key = `${x}-${z}`; 
     const model = stoneModels[key];
     if (model) {
-        const duration = 350; const startTime = Date.now();
+        const duration = 300; // Shorter capture animation
+        const startTime = Date.now();
         const originalScaleX = model.scale.x; 
         const originalScaleY = model.scale.y; 
         const originalScaleZ = model.scale.z; 
@@ -334,14 +360,16 @@ function removeStoneFrom3DScene(x, z) {
         function animateCapture() {
             const elapsedTime = Date.now() - startTime;
             const progress = Math.min(elapsedTime / duration, 1); 
-            model.position.y = startY + progress * 0.8; 
+            
+            model.position.y = startY + progress * 0.5; // Move up less drastically
             model.scale.set(
-                originalScaleX * (1 - progress * progress),
-                originalScaleY * (1 - progress * progress),
-                originalScaleZ * (1 - progress * progress)
+                originalScaleX * (1 - progress), // Linear shrink
+                originalScaleY * (1 - progress),
+                originalScaleZ * (1 - progress)
             );
+
             model.traverse(child => {
-                if (child.isMesh && child.material) {
+                if (child.isMesh && child.material && child.material.isMeshStandardMaterial) { // Check material type
                     if (!child.material.userData) child.material.userData = {}; 
                     if (child.material.userData.originalOpacity === undefined) child.material.userData.originalOpacity = child.material.opacity !== undefined ? child.material.opacity : 1;
                     child.material.transparent = true;
@@ -355,7 +383,6 @@ function removeStoneFrom3DScene(x, z) {
     }
 }
 function onBoardClick(event) {
-    // ... (onBoardClick unchanged) ...
     if (gameOver || (gameMode === 'multiplayer' && currentPlayer !== localPlayerNum)) return;
     if (!boardMesh) return; 
     const rect = renderer.domElement.getBoundingClientRect();
@@ -368,12 +395,10 @@ function onBoardClick(event) {
     }
 }
 function animate() {
-    // ... (animate unchanged) ...
     if (!renderer) return; requestAnimationFrame(animate);
     if (controls) controls.update(); renderer.render(scene, camera);
 }
 function onWindowResize() {
-    // ... (onWindowResize unchanged) ...
     if (camera && renderer && gameContainer) {
         camera.aspect = gameContainer.clientWidth / gameContainer.clientHeight;
         camera.updateProjectionMatrix(); renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
@@ -381,9 +406,8 @@ function onWindowResize() {
 }
 
 // =================================================================
-// Go Game Logic
+// Go Game Logic (Unchanged)
 // =================================================================
-// ... (All Go game logic functions remain unchanged) ...
 function getNeighbors(row, col) {
     const neighbors = [];
     if (row > 0) neighbors.push({ row: row - 1, col: col });
@@ -449,10 +473,10 @@ function findGroup(startRow, startCol, boardState) {
     }
     return { stones: groupStones, liberties: libertyPoints.size };
 }
+
 // =================================================================
-// AI Logic
+// AI Logic (Unchanged)
 // =================================================================
-// ... (getAIMove unchanged) ...
 function getAIMove() { 
     let bestScore = -Infinity; let bestMoves = []; const availableMoves = [];
     for (let r = 0; r < BOARD_SIZE; r++) { for (let c = 0; c < BOARD_SIZE; c++) { if (board[r][c] === 0) availableMoves.push({ r, c }); } }
@@ -494,10 +518,10 @@ function getAIMove() {
     if (bestMoves.length > 0) return bestMoves[Math.floor(Math.random() * bestMoves.length)];
     else return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : {pass: true};
 }
+
 // =================================================================
-// Game Flow & UI
+// Game Flow & UI (Unchanged)
 // =================================================================
-// ... (Game Flow & UI functions unchanged, with null checks for DOM elements) ...
 function resetGame() {
     if (unsubscribeGameListener) unsubscribeGameListener();
     gameOver = true; activeGameId = null; localPlayerNum = 0; currentPlayer = 1;
@@ -576,7 +600,6 @@ function updateTurnText() {
 // =================================================================
 // Multiplayer (Firebase)
 // =================================================================
-// ... (Multiplayer functions unchanged) ...
 async function createMultiplayerGame() {
     if (!auth || !auth.currentUser) {console.error("Auth not ready for createMultiplayerGame"); return; }
     resetGame(); gameMode = 'multiplayer'; localPlayerNum = 1; gameOver = false;

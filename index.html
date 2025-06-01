@@ -6,22 +6,19 @@
     <title>Mythos Go</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
-    <!-- Prevent 404 for favicon -->
     <link rel="icon" href="data:,">
 
-    <!-- IMPORT MAP: Tells browser how to resolve module names for ES6 imports -->
     <script type="importmap">
     {
         "imports": {
-            "three": "https://cdn.skypack.dev/three@0.128.0/build/three.module.js",
-            "three/addons/": "https://cdn.skypack.dev/three@0.128.0/examples/jsm/"
+            "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
         }
     }
     </script>
 </head>
 <body>
 
-    <!-- Header Section -->
     <header>
         <div class="logo-container">
             <svg class="logo-fish" viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg"><path d="M95 25C95 16.7157 68.2843 10 50 10C31.7157 10 5 16.7157 5 25C5 33.2843 31.7157 40 50 40C68.2843 40 95 33.2843 95 25Z" stroke="black" stroke-width="2" fill="none"/><path d="M75 25L90 15M75 25L90 35" stroke="black" stroke-width="2"/></svg>
@@ -32,7 +29,6 @@
         </nav>
     </header>
 
-    <!-- Main Content Area -->
     <main>
         <div id="game-container"></div>
         <div id="game-info-panel">
@@ -50,12 +46,10 @@
         </div>
     </main>
 
-    <!-- Footer Section -->
     <footer>
         <p>&copy; <script>document.write(new Date().getFullYear())</script> Mythos Go. Inspired by Sea Harvest.</p>
     </footer>
 
-    <!-- Modals (structure remains the same) -->
     <div id="game-setup-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-button" data-modal-id="game-setup-modal">&times;</button>
@@ -117,44 +111,14 @@
         <div class="modal-content modal-large">
             <button class="close-button" data-modal-id="rules-strategy-modal">&times;</button>
             <h2>Go: Basic Rules & Strategy</h2>
-            <!-- Rules and Strategy Content -->
-            <div class="rules-section">
-                <h3>Basic Rules of Go</h3>
-                <p><strong>Objective:</strong> The main goal in Go is to surround more empty territory on the board than your opponent. You also score points for stones you capture.</p>
-                <ol>
-                    <li><strong>The Board:</strong> Go is played on a grid of lines (typically 9x9, 13x13, or 19x19 for traditional games; our game uses 9x9). Stones are placed on the <strong>intersections</strong> of these lines, not in the squares.</li>
-                    <li><strong>Turns:</strong> Players (Black and White) take turns placing one stone of their color on an empty intersection. Black usually plays first. (Player 1 in our game is Black, Player 2/AI is White).</li>
-                    <li><strong>Liberties:</strong> A "liberty" is an empty intersection directly adjacent (up, down, left, or right) to a stone or a group of connected stones of the same color.</li>
-                    <li><strong>Capture:</strong> If you place a stone that fills the last liberty of an opponent's stone or group of stones, that opponent's stone(s) are captured and removed from the board. You add them to your captured stones count.</li>
-                    <li><strong>Suicide Rule:</strong> You cannot place a stone on a point where it (or the group it joins) would have no liberties, UNLESS placing that stone immediately captures one or more opponent stones (thereby creating liberties for your new stone/group).</li>
-                    <li><strong>Ko Rule (Simplified):</strong> To prevent infinite repetition of capturing a single stone back and forth, you cannot immediately recapture in a "Ko" situation. You must play elsewhere on the board for at least one turn before you can make that recapture. (Our game will implement a basic Ko check).</li>
-                    <li><strong>Passing:</strong> Instead of placing a stone, you can choose to "Pass" your turn.</li>
-                    <li><strong>End of Game:</strong> The game ends when both players pass consecutively.</li>
-                    <li><strong>Scoring (Simplified for this Game):</strong> Traditionally, Go is scored by counting surrounded empty territory plus captured stones. For simplicity in "Mythos Go," the player with the **most captured stones** at the end of the game wins. (Territory counting is complex to program).</li>
-                </ol>
-            </div>
-            <div class="strategy-section">
-                <h3>Basic Strategy Overview</h3>
-                <p>Go strategy is incredibly deep, but here are some fundamental concepts:</p>
-                <ul>
-                    <li><strong>1. Corners, then Sides, then Center:</strong><p>It's generally easiest to make territory in the corners of the board, then along the sides, and lastly in the center. This is because the edges of the board act as natural walls.</p><p><em>Example:</em> To secure a 3x3 area of territory in a corner, you might only need 4-5 stones. To secure the same area in the center, you'd need many more stones to surround it completely.</p></li>
-                    <li><strong>2. Making "Eyes" for Living Groups:</strong><p>A group of stones is "alive" (cannot be captured) if it has at least two separate empty intersections inside it, called "eyes." If your opponent fills one eye, your group can still live with the other. A group with only one eye can be killed if the opponent fills that eye.</p><p><em>Example:</em> Imagine an 'L' shape of 3 of your stones (`XXX`) with an empty point in the bend (`X.X / XXX`). That empty point is an eye. Try to form two such separate empty points within a larger group to make it safe.</p></li>
-                    <li><strong>3. Connecting Your Stones:</strong><p>Connected stones are stronger because they share liberties and support each other. Try to keep your groups connected or ensure they have easy ways to connect if attacked.</p><p><em>Example:</em> A single line of stones is easier to cut and attack than a thicker, clumped group. A "one-point jump" (leaving one empty intersection between two of your stones) is a common way to extend a group while keeping it relatively connected.</p></li>
-                    <li><strong>4. Cutting Your Opponent's Stones:</strong><p>If your opponent's stones are trying to connect or form a large group, look for opportunities to "cut" them by placing your stone between them. Separated groups are weaker and easier to attack or capture.</p><p><em>Example:</em> If your opponent has two stones like `O . O` (O are opponent stones, . is empty), placing your stone `X` in the middle (`O X O`) cuts them apart.</p></li>
-                    <li><strong>5. Balancing Attack and Defense:</strong><p>Don't get so focused on attacking that you neglect the safety of your own groups. Similarly, don't be so defensive that you miss opportunities to make territory or attack weak opponent groups.</p><p><em>Example:</em> Before launching an attack, quickly check if the attacking stones themselves are strong or if they could be easily cut off and captured. If an opponent attacks one of your weak groups, consider if it's better to defend it or to sacrifice it and gain an advantage elsewhere on the board (an advanced concept called "sente").</p></li>
-                    <li><strong>6. Efficiency:</strong><p>Try to make each move do as much as possible. A good move might expand your potential territory while simultaneously threatening an opponent's group or strengthening one of your own.</p></li>
-                </ul>
-                <p><em>Go is a journey of continuous learning. Have fun exploring its depths!</em></p>
-            </div>
+            <div class="rules-section"><h3>Basic Rules of Go</h3><p><strong>Objective:</strong> The main goal in Go is to surround more empty territory on the board than your opponent. You also score points for stones you capture.</p><ol><li><strong>The Board:</strong> Go is played on a grid of lines (typically 9x9, 13x13, or 19x19 for traditional games; our game uses 9x9). Stones are placed on the <strong>intersections</strong> of these lines, not in the squares.</li><li><strong>Turns:</strong> Players (Black and White) take turns placing one stone of their color on an empty intersection. Black usually plays first. (Player 1 in our game is Black, Player 2/AI is White).</li><li><strong>Liberties:</strong> A "liberty" is an empty intersection directly adjacent (up, down, left, or right) to a stone or a group of connected stones of the same color.</li><li><strong>Capture:</strong> If you place a stone that fills the last liberty of an opponent's stone or group of stones, that opponent's stone(s) are captured and removed from the board. You add them to your captured stones count.</li><li><strong>Suicide Rule:</strong> You cannot place a stone on a point where it (or the group it joins) would have no liberties, UNLESS placing that stone immediately captures one or more opponent stones (thereby creating liberties for your new stone/group).</li><li><strong>Ko Rule (Simplified):</strong> To prevent infinite repetition of capturing a single stone back and forth, you cannot immediately recapture in a "Ko" situation. You must play elsewhere on the board for at least one turn before you can make that recapture. (Our game will implement a basic Ko check).</li><li><strong>Passing:</strong> Instead of placing a stone, you can choose to "Pass" your turn.</li><li><strong>End of Game:</strong> The game ends when both players pass consecutively.</li><li><strong>Scoring (Simplified for this Game):</strong> Traditionally, Go is scored by counting surrounded empty territory plus captured stones. For simplicity in "Mythos Go," the player with the **most captured stones** at the end of the game wins. (Territory counting is complex to program).</li></ol></div><div class="strategy-section"><h3>Basic Strategy Overview</h3><p>Go strategy is incredibly deep, but here are some fundamental concepts:</p><ul><li><strong>1. Corners, then Sides, then Center:</strong><p>It's generally easiest to make territory in the corners of the board, then along the sides, and lastly in the center. This is because the edges of the board act as natural walls.</p><p><em>Example:</em> To secure a 3x3 area of territory in a corner, you might only need 4-5 stones. To secure the same area in the center, you'd need many more stones to surround it completely.</p></li><li><strong>2. Making "Eyes" for Living Groups:</strong><p>A group of stones is "alive" (cannot be captured) if it has at least two separate empty intersections inside it, called "eyes." If your opponent fills one eye, your group can still live with the other. A group with only one eye can be killed if the opponent fills that eye.</p><p><em>Example:</em> Imagine an 'L' shape of 3 of your stones (`XXX`) with an empty point in the bend (`X.X / XXX`). That empty point is an eye. Try to form two such separate empty points within a larger group to make it safe.</p></li><li><strong>3. Connecting Your Stones:</strong><p>Connected stones are stronger because they share liberties and support each other. Try to keep your groups connected or ensure they have easy ways to connect if attacked.</p><p><em>Example:</em> A single line of stones is easier to cut and attack than a thicker, clumped group. A "one-point jump" (leaving one empty intersection between two of your stones) is a common way to extend a group while keeping it relatively connected.</p></li><li><strong>4. Cutting Your Opponent's Stones:</strong><p>If your opponent's stones are trying to connect or form a large group, look for opportunities to "cut" them by placing your stone between them. Separated groups are weaker and easier to attack or capture.</p><p><em>Example:</em> If your opponent has two stones like `O . O` (O are opponent stones, . is empty), placing your stone `X` in the middle (`O X O`) cuts them apart.</p></li><li><strong>5. Balancing Attack and Defense:</strong><p>Don't get so focused on attacking that you neglect the safety of your own groups. Similarly, don't be so defensive that you miss opportunities to make territory or attack weak opponent groups.</p><p><em>Example:</em> Before launching an attack, quickly check if the attacking stones themselves are strong or if they could be easily cut off and captured. If an opponent attacks one of your weak groups, consider if it's better to defend it or to sacrifice it and gain an advantage elsewhere on the board (an advanced concept called "sente").</p></li><li><strong>6. Efficiency:</strong><p>Try to make each move do as much as possible. A good move might expand your potential territory while simultaneously threatening an opponent's group or strengthening one of your own.</p></li></ul><p><em>Go is a journey of continuous learning. Have fun exploring its depths!</em></p></div>
         </div>
     </div>
     
-    <!-- Firebase Scripts (remain the same) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     
-    <!-- App Scripts: firebase.js first, then main.js as a module -->
     <script src="firebase.js"></script>
     <script src="main.js" type="module"></script> 
 

@@ -3,15 +3,16 @@
 // =================================================================
 
 // --- Constants ---
-// --- Constants ---
-const BOARD_SIZE = 9;
+const BOARD_SIZE = 9; // 9x9 board for faster games
 const PIECE_MODEL_PATHS = {
-    'Achilles': 'assets/achilles.glb',         // New
-    'War Elephant': 'assets/elephant.glb', // New
-    'Knight Horse': 'assets/horse.glb', // New
-    'Aztec': 'assets/aztec.glb'                // New
+    'zeus': 'assets/zeus.glb',
+    'athena': 'assets/athena.glb',
+    'poseidon': 'assets/poseidon.glb',
+    'Achilles': 'assets/achilles.glb',
+    'War Elephant': 'assets/war_elephant.glb',
+    'Knight Horse': 'assets/knight_horse.glb',
+    'Aztec': 'assets/aztec.glb'
 };
-
 
 // --- DOM Element References ---
 const gameContainer = document.getElementById('game-container');
@@ -66,12 +67,11 @@ let consecutivePasses = 0;
 let captures = { 1: 0, 2: 0 };
 let koState = null; // Stores board state to prevent Ko recaptures
 
-let player1Settings = { uid: null, color: '#222222', modelPath: DEFAULT_PIECE_MODEL_PATH };
-let player2Settings = { uid: null, color: '#FFFFFF', modelPath: DEFAULT_PIECE_MODEL_PATH };
+let player1Settings = { uid: null, color: '#222222', piece: 'zeus' }; // Default piece name
+let player2Settings = { uid: null, color: '#FFFFFF', piece: 'zeus' }; // Default piece name
 
-// --- Firebase Instances ---
-const db = firebase.firestore();
-const auth = firebase.auth();
+// NOTE: We do not declare 'db' or 'auth' here because they are already
+// created in the global scope by firebase.js. This fixes the second error.
 
 // =================================================================
 // Initial Setup
@@ -84,14 +84,21 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function waitForAuthAndSetupUI() {
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            player1Settings.uid = user.uid; // Set local player UID
-            checkUrlForGameToJoin();
-        } else {
-            statusText.textContent = "Connecting to game services...";
-        }
-    });
+    // Check if auth is available before using it
+    if (typeof auth !== 'undefined') {
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                player1Settings.uid = user.uid; // Set local player UID
+                checkUrlForGameToJoin();
+            } else {
+                statusText.textContent = "Connecting to game services...";
+            }
+        });
+    } else {
+        // This might happen if firebase.js fails to load, so we handle it gracefully.
+        console.error("Firebase Auth not available. Check script loading.");
+        statusText.textContent = "Error: Cannot connect to Authentication services.";
+    }
 }
 
 function checkUrlForGameToJoin() {
@@ -189,7 +196,7 @@ function addStoneTo3DScene(x, z, player) {
     if (stoneModels[key]) return; // Stone already exists visually
 
     const settings = player === 1 ? player1Settings : player2Settings;
-    const modelPath = settings.modelPath || DEFAULT_PIECE_MODEL_PATH;
+    const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS['zeus']; // Default to Zeus if invalid
     
     const loader = new THREE.GLTFLoader();
     loader.load(modelPath, gltf => {
@@ -320,6 +327,40 @@ function placeStone(row, col, player) {
 }
 
 /**
+ * Simulate placing a stone on a given board and koState, without mutating global state.
+ * Returns null if move is illegal, or {capturedStones, tempBoard, newKoState} if legal.
+ */
+function simulatePlaceStone(row, col, player, boardState, koStateSim) {
+    if (boardState[row][col] !== 0) return null;
+
+    let tempBoard = boardState.map(r => r.slice());
+    tempBoard[row][col] = player;
+
+    const opponent = player === 1 ? 2 : 1;
+    let capturedStones = [];
+
+    const neighbors = getNeighbors(row, col);
+    for (const n of neighbors) {
+        if (tempBoard[n.row][n.col] === opponent) {
+            const group = findGroup(n.row, n.col, tempBoard);
+            if (group.liberties === 0) {
+                capturedStones.push(...group.stones);
+            }
+        }
+    }
+
+    capturedStones.forEach(stone => tempBoard[stone.row][stone.col] = 0);
+
+    const ownGroup = findGroup(row, col, tempBoard);
+    if (ownGroup.liberties === 0) return null;
+
+    const boardString = tempBoard.map(r => r.join('')).join('');
+    if (boardString === koStateSim) return null;
+
+    return { capturedStones, tempBoard, newKoState: capturedStones.length > 0 ? boardState.map(r => r.join('')).join('') : null };
+}
+
+/**
  * Finds a connected group of stones and its liberties.
  * Uses a Breadth-First Search (BFS) algorithm.
  * @returns {{stones: Array, liberties: number}}
@@ -380,54 +421,38 @@ function getAIMove() {
         }
     }
     
-    if(availableMoves.length === 0) return {pass: true};
+    if (availableMoves.length === 0) return { pass: true };
 
     for (const move of availableMoves) {
         let score = 0;
-        const tempBoard = board.map(r => r.slice());
-        
-        // --- Simulate the move and see its consequences ---
-        const capturedStones = placeStone(move.r, move.c, 2); // AI is Player 2
-        if (capturedStones === null) continue; // Skip illegal moves
+        // Use simulation helper
+        const simResult = simulatePlaceStone(move.r, move.c, 2, board, koState);
+        if (!simResult) continue;
 
-        // 1. High score for capturing stones
+        const { capturedStones, tempBoard } = simResult;
         score += capturedStones.length * 100;
 
-        // Reset board for next simulation
-        board = tempBoard;
-
-        // --- Add heuristic scores for non-capture moves ---
-        // 2. Score for putting opponent in atari (1 liberty)
+        // Heuristics: use tempBoard for group checks
         const neighbors = getNeighbors(move.r, move.c);
         for (const n of neighbors) {
-            if (board[n.row][n.col] === 1) { // Opponent piece
-                const group = findGroup(n.row, n.col, board);
-                if (group.liberties === 2) { // Placing a stone here will reduce it to 1
-                    score += 25;
-                }
+            if (tempBoard[n.row][n.col] === 1) {
+                const group = findGroup(n.row, n.col, tempBoard);
+                if (group.liberties === 2) score += 25;
             }
         }
-
-        // 3. Score for saving own group from atari
         for (const n of neighbors) {
-            if (board[n.row][n.col] === 2) {
-                const group = findGroup(n.row, n.col, board);
-                if (group.liberties === 1) {
-                    score += 50; // High priority to save own groups
-                }
+            if (tempBoard[n.row][n.col] === 2) {
+                const group = findGroup(n.row, n.col, tempBoard);
+                if (group.liberties === 1) score += 50;
             }
         }
-        
-        // 4. Small bonus for proximity to own stones (encourages connection)
         for (const n of neighbors) {
-            if (board[n.row][n.col] === 2) score += 1;
+            if (tempBoard[n.row][n.col] === 2) score += 1;
         }
-
-        // 5. Small bonus for board position (corners > sides > center)
-        if (difficulty !== 'easy') {
+        if (currentDifficulty !== 'easy') {
             const edgeDist = Math.min(move.r, move.c, BOARD_SIZE - 1 - move.r, BOARD_SIZE - 1 - move.c);
-            if (edgeDist === 0) score += 3; // side
-            if (edgeDist <= 2) score += 1; // near edge
+            if (edgeDist === 0) score += 3;
+            if (edgeDist <= 2) score += 1;
         }
 
         if (score > bestScore) {
@@ -437,16 +462,11 @@ function getAIMove() {
             bestMoves.push(move);
         }
     }
-    
-    board = board.map(r => r.slice()); // Ensure board is reverted after all sims
 
     if (bestMoves.length > 0) {
-        // For 'hard' difficulty, we could add more complex logic here.
-        // For now, it just benefits from the better scoring.
         return bestMoves[Math.floor(Math.random() * bestMoves.length)];
     } else {
-        // No good move found, or all moves are equally neutral
-        return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : {pass: true};
+        return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : { pass: true };
     }
 }
 
@@ -465,7 +485,9 @@ function resetGame() {
     captures = { 1: 0, 2: 0 };
     koState = null;
     initializeBoardArray();
-    Object.values(stoneModels).forEach(model => scene.remove(model));
+    if (scene) {
+        Object.values(stoneModels).forEach(model => scene.remove(model));
+    }
     stoneModels = {};
     updateScoreUI();
     turnText.textContent = "";
@@ -479,7 +501,9 @@ function startNewAIGame() {
     gameOver = false;
     
     player1Settings.color = playerColorInput.value;
+    player1Settings.piece = playerPieceSelect.value; // Get selected piece
     player2Settings.color = player1Settings.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
+    player2Settings.piece = 'zeus'; // AI can use a default piece
     
     initThreeJS();
     updateStatusText(`Playing vs. AI (${currentDifficulty}).`);
@@ -601,6 +625,7 @@ async function createMultiplayerGame() {
     
     player1Settings.uid = auth.currentUser.uid;
     player1Settings.color = playerColorInput.value;
+    player1Settings.piece = playerPieceSelect.value; // Get selected piece
     
     const newGameData = {
         player1: player1Settings, player2: null,
@@ -637,6 +662,7 @@ async function joinMultiplayerGame(gameId) {
         localPlayerNum = 2;
         player2Settings.uid = auth.currentUser.uid;
         player2Settings.color = gameData.player1.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
+        player2Settings.piece = playerPieceSelect.value; // P2 selects their piece
         
         await gameRef.update({ player2: player2Settings, status: 'active' });
         activeGameId = gameId;
@@ -682,20 +708,21 @@ function listenToGameUpdates(gameId) {
 }
 
 function sync3DAndUI(gameData) {
-     Object.values(stoneModels).forEach(model => scene.remove(model));
-     stoneModels = {};
-     for(let r=0; r<BOARD_SIZE; r++) {
-         for(let c=0; c<BOARD_SIZE; c++) {
-             if(gameData.board[r][c] !== 0) {
-                 addStoneTo3DScene(c, r, gameData.board[r][c]);
-             }
-         }
-     }
-     updateScoreUI();
+    if (!scene) return;
+    Object.values(stoneModels).forEach(model => scene.remove(model));
+    stoneModels = {};
+    for(let r=0; r<BOARD_SIZE; r++) {
+        for(let c=0; c<BOARD_SIZE; c++) {
+            if(gameData.board[r][c] !== 0) {
+                addStoneTo3DScene(c, r, gameData.board[r][c]);
+            }
+        }
+    }
+    updateScoreUI();
 }
 
 async function updateGameInFirebase(dataToUpdate) {
-    if (!activeGameId) return;
+    if (!activeGameId || !auth.currentUser) return;
     try { await db.collection('games').doc(activeGameId).update(dataToUpdate); }
     catch (error) { console.error("Firebase update error:", error); }
 }

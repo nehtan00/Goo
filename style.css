@@ -264,8 +264,32 @@ footer {
 .modal-content {background-color: #fefefe; padding: 30px; border: 1px solid #bbb; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2); width: 100%; max-width: 500px; position: relative; text-align: left; max-height: 90vh; overflow-y: auto; border-radius: 8px;}
 .modal-content.modal-large {max-width: 800px; }
 .modal-content h2 {font-family: var(--primary-font); text-align: center; margin-top: 0; margin-bottom: 25px; text-transform: uppercase; color: var(--text-color); border-bottom: 1px solid #ddd; padding-bottom: 10px;}
-.close-button { position: absolute; top: 10px; right: 15px; font-size: 2.5rem; font-weight: bold; color: #aaa; background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; line-height: 1; cursor: pointer; transform: none !important;}
-.close-button:hover { color: var(--border-color) !important; background: none !important; transform: none !important; box-shadow: none !important;}
+/* In style.css, find and update/replace this .close-button rule */
+
+.close-button {
+    position: absolute;
+    top: 10px; /* Distance from the top of the modal content area */
+    right: 15px; /* Distance from the right of the modal content area */
+    font-size: 2.8rem; /* INCREASED for more prominence */
+    font-weight: bold;
+    color: #888; /* Slightly darker grey for better visibility */
+    background: none !important; 
+    border: none !important; 
+    box-shadow: none !important; 
+    padding: 0 5px; /* Added a little padding to increase clickable area slightly */
+    line-height: 1;
+    cursor: pointer;
+    transform: none !important;
+    z-index: 10; /* Ensure it's above other modal content if there's overlap */
+    transition: color 0.2s ease-in-out; /* Smooth color change on hover */
+}
+
+.close-button:hover {
+    color: #000000 !important; /* Black on hover for very clear indication */
+    background: none !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
 .setup-section, .rules-section, .strategy-section {border-top: 1px solid #e0e0e0; padding-top: 20px; margin-top: 20px;}
 .setup-section:first-of-type, .rules-section:first-of-type { border-top: none; }
 .modal-content label {display: block; margin-bottom: 8px; font-weight: bold; color: #555;}

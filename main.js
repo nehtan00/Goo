@@ -149,6 +149,9 @@ function checkUrlForGameToJoin() { /* ... unchanged ... */
 // =================================================================
 // 3D Scene
 // =================================================================
+// =================================================================
+// 3D Scene
+// =================================================================
 function initThreeJS() {
     console.log("main.js: initThreeJS() CALLED.");
     if (!gameContainer) { console.error("main.js: gameContainer not found for Three.js."); return; }
@@ -160,26 +163,43 @@ function initThreeJS() {
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.4; 
+    renderer.toneMappingExposure = 0.4; // Your current exposure setting
     renderer.outputEncoding = THREE.sRGBEncoding;
     gameContainer.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement); 
     controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2); controls.enableDamping = true;
     controls.dampingFactor = 0.05; controls.minDistance = BOARD_SIZE * 0.7; controls.maxDistance = BOARD_SIZE * 2.5;
     controls.maxPolarAngle = Math.PI / 2 - 0.02; 
-   // **LIGHTING: Changed to Candlelight Color**
-    const candlelight = 0xffd580; // A nice warm, orangey-yellow for candlelight
-    const groundColor = 0x402808; // A darker, brownish color for the ground reflection
-    const hemiLight = new THREE.HemisphereLight(candlelight, groundColor, 0.8); // Also reduced intensity
-    hemiLight.position.set(0, 20, 0); scene.add(hemiLight);
-    // The candlelight color is already defined above from the hemiLight section
-    const dirLight = new THREE.DirectionalLight(candlelight, 0.7); // Changed from white
-    dirLight.position.set(10, 15, 12); dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; scene.add(dirLight);
+    
+    // Your Candlelight Color Setup
+    const candlelight = 0xffd580; 
+    const groundColor = 0x402808; 
+    const hemiLight = new THREE.HemisphereLight(candlelight, groundColor, 0.8); 
+    hemiLight.position.set(0, 20, 0); 
+    scene.add(hemiLight);
+    
+    const dirLight = new THREE.DirectionalLight(candlelight, 0.7); 
+    dirLight.position.set(10, 15, 12); 
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048; 
+    dirLight.shadow.mapSize.height = 2048; 
 
-    const fillLight = new THREE.DirectionalLight(candlelight, 0.3); // Changed from white
+    // ** NEW: Shadow Camera properties for dirLight to expand "beam" **
+    const shadowCamSize = BOARD_SIZE * 1.5; // Adjust this multiplier to change beam size (e.g., 1.5, 2.0, 2.5)
+    dirLight.shadow.camera.near = 0.5;    
+    dirLight.shadow.camera.far = 50;      
+    dirLight.shadow.camera.left = -shadowCamSize / 2;
+    dirLight.shadow.camera.right = shadowCamSize / 2;
+    dirLight.shadow.camera.top = shadowCamSize / 2;
+    dirLight.shadow.camera.bottom = -shadowCamSize / 2;
+    // dirLight.shadow.camera.updateProjectionMatrix(); // Usually not needed if set before first render
+
+    scene.add(dirLight);
+
+    const fillLight = new THREE.DirectionalLight(candlelight, 0.3); 
     fillLight.position.set(-10, 10, -5);
     scene.add(fillLight);
+    
     createFloatingGridBoard(); 
     raycaster = new THREE.Raycaster(); mouse = new THREE.Vector2();
     if (gameContainer) gameContainer.addEventListener('click', onBoardClick, false);
@@ -244,7 +264,7 @@ function createFloatingGridBoard() {
 function drawBoardGridLines() {
     const lineThickness = 0.04; 
     const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.9, metalness: 1 }); 
-    const lineY = 0.003; // Y position relative to the board's top surface (which is at world Y=0)
+    const lineY = 0.001; // Y position relative to the board's top surface (which is at world Y=0)
     
     const gridLinesGroup = new THREE.Group();
     // The board's top surface is at world Y=0. Grid lines are placed on this.
@@ -256,13 +276,13 @@ function drawBoardGridLines() {
         const hGeom = new THREE.BoxGeometry(BOARD_SIZE, lineThickness, lineThickness);
         const hLine = new THREE.Mesh(hGeom, gridLineMaterial);
         // Positioned relative to the board's local origin, so it's centered along X.
-        hLine.position.set((BOARD_SIZE -1) / 2, 0, i); 
+        hLine.position.set((BOARD_SIZE -1.3) / 2, 0, i); 
         gridLinesGroup.add(hLine);
 
         // Vertical lines (run along X axis, from z=0 to z=BOARD_SIZE-1)
         const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, BOARD_SIZE);
         const vLine = new THREE.Mesh(vGeom, gridLineMaterial);
-        vLine.position.set(i, 0, (BOARD_SIZE -1) / 2);
+        vLine.position.set(i, 0, (BOARD_SIZE -1.3) / 2);
         gridLinesGroup.add(vLine);
     }
     scene.add(gridLinesGroup);

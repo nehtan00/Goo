@@ -1,5 +1,5 @@
 // =================================================================
-// Mythos Go - main.js (Ensuring getNeighbors is Defined)
+// Mythos Go - main.js (Enhanced Piece Visuals & Animations)
 // =================================================================
 
 // --- Constants ---
@@ -27,17 +27,17 @@ let boardMesh;
 let stoneModels = {};
 
 // --- Game State Variables ---
-let board = []; // Stores the main game board state
+let board = [];
 let currentPlayer = 1;
 let gameMode = null;
-let currentDifficulty = 'easy'; // Default difficulty, will be set properly
+let currentDifficulty = 'easy';
 let gameOver = true;
 let activeGameId = null;
 let localPlayerNum = 0;
 let unsubscribeGameListener = null;
 let consecutivePasses = 0;
 let captures = { 1: 0, 2: 0 };
-let koState = null; // Stores board state string for Ko rule
+let koState = null;
 
 let player1Settings = { uid: null, color: '#222222', piece: DEFAULT_PIECE_KEY };
 let player2Settings = { uid: null, color: '#FFFFFF', piece: DEFAULT_PIECE_KEY };
@@ -171,46 +171,114 @@ function createMarbleBoard3D() {
 }
 function drawBoardGridLines() {
     const material = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 });
-    const lineY = 0.01; 
+    const lineY = 0.01; // Position lines on top surface of the board slab
     for (let i = 0; i < BOARD_SIZE; i++) {
         scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, lineY, i), new THREE.Vector3(BOARD_SIZE - 1, lineY, i)]), material));
         scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(i, lineY, 0), new THREE.Vector3(i, lineY, BOARD_SIZE - 1)]), material));
     }
 }
-function addStoneTo3DScene(x, z, player) {
+function addStoneTo3DScene(x, z, player) { // x, z are grid coordinates
     const key = `${x}-${z}`; if (stoneModels[key]) return;
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
-    const pieceBaseScale = 0.55; const pieceYOffset = 0.1;
+    
+    const pieceBaseScaleMultiplier = 0.7; // **SCALING ADJUSTMENT:** Increase this for larger pieces
+    const pieceYOnBoard = 0.05; // **POSITIONING ADJUSTMENT:** Y pos when ON the board (slightly above lines)
+
     const loader = new THREE.GLTFLoader();
     loader.load(modelPath, gltf => {
-        const model = gltf.scene; const box = new THREE.Box3().setFromObject(model);
-        const size = box.getSize(new THREE.Vector3()); const maxDim = Math.max(size.x, size.y, size.z);
-        const scaleFactor = (0.9 / maxDim) * pieceBaseScale; model.scale.set(scaleFactor, scaleFactor, scaleFactor);
-        const newBox = new THREE.Box3().setFromObject(model); const center = newBox.getCenter(new THREE.Vector3());
-        model.position.x -= center.x; model.position.y -= newBox.min.y; model.position.z -= center.z;
-        model.position.set(x, pieceYOffset + 1.5, z);
+        const model = gltf.scene; 
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3()); 
+        const maxDim = Math.max(size.x, size.y, size.z);
+        
+        const scaleFactor = (0.85 / maxDim) * pieceBaseScaleMultiplier; // 0.85 for piece to be slightly smaller than grid cell
+        model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+        
+        const newBox = new THREE.Box3().setFromObject(model);
+        const center = newBox.getCenter(new THREE.Vector3());
+        model.position.x -= center.x; 
+        model.position.y -= newBox.min.y; // Base of model at y=0 in its local space
+        model.position.z -= center.z;
+
+        // Initial animation position (higher up)
+        model.position.set(x, pieceYOnBoard + 2.0, z); // Start higher for a more noticeable drop
+
         model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true;
-            child.material = new THREE.MeshStandardMaterial({ color: settings.color, roughness: 0.3, metalness: 0.2 }); }});
+            // **COLOR FIX:** Ensure MeshStandardMaterial is used and color is applied
+            child.material = new THREE.MeshStandardMaterial({
+                color: new THREE.Color(settings.color), // Use THREE.Color for hex strings
+                roughness: 0.4, 
+                metalness: 0.15
+            }); 
+        }});
         scene.add(model); stoneModels[key] = model;
-        let currentY = model.position.y; const targetY = pieceYOffset; const dropSpeed = 0.1;
-        function animateDrop() { if (currentY > targetY) { currentY -= dropSpeed * (currentY - targetY + 0.2);
-            model.position.y = Math.max(currentY, targetY); requestAnimationFrame(animateDrop); } else model.position.y = targetY; }
+        
+        let currentY = model.position.y; 
+        const targetY = pieceYOnBoard; // Final Y position on board
+        const dropSpeed = 0.12; // Adjusted speed for smoother drop
+
+        function animateDrop() { 
+            if (currentY > targetY) { 
+                currentY -= dropSpeed * Math.max(0.5, (currentY - targetY)); // Smoother easing
+                model.position.y = Math.max(currentY, targetY); 
+                requestAnimationFrame(animateDrop); 
+            } else model.position.y = targetY; 
+        }
         animateDrop();
     }, undefined, error => { console.error(`Model load error for ${modelPath}:`, error);
-        const stoneRadius = 0.4 * pieceBaseScale; const stoneHeight = 0.2 * pieceBaseScale;
-        const geom = new THREE.CylinderGeometry(stoneRadius, stoneRadius, stoneHeight, 32);
-        const mat = new THREE.MeshStandardMaterial({ color: settings.color, roughness: 0.5, metalness: 0.1 });
-        const piece = new THREE.Mesh(geom, mat); piece.castShadow = true; piece.position.set(x, pieceYOffset + 1.5, z);
+        const stoneRadius = 0.35 * pieceBaseScaleMultiplier; 
+        const stoneHeight = 0.15 * pieceBaseScaleMultiplier;
+        const geom = new THREE.CylinderGeometry(stoneRadius, stoneRadius, stoneHeight, 24);
+        const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(settings.color), roughness: 0.5, metalness: 0.1 });
+        const piece = new THREE.Mesh(geom, mat); piece.castShadow = true; 
+        piece.position.set(x, pieceYOnBoard + 2.0, z);
         scene.add(piece); stoneModels[key] = piece;
-        let currentY = piece.position.y; const targetY = pieceYOffset + stoneHeight / 2; const dropSpeed = 0.1;
-        function animateDropFallback() { if (currentY > targetY) { currentY -= dropSpeed * (currentY - targetY + 0.2);
+        
+        let currentY = piece.position.y; const targetY = pieceYOnBoard + stoneHeight/2; 
+        const dropSpeed = 0.12;
+        function animateDropFallback() { if (currentY > targetY) { currentY -= dropSpeed * Math.max(0.5, (currentY - targetY));
             piece.position.y = Math.max(currentY, targetY); requestAnimationFrame(animateDropFallback); } else piece.position.y = targetY; }
         animateDropFallback();
     });
 }
+
 function removeStoneFrom3DScene(x, z) {
-    const key = `${x}-${z}`; if (stoneModels[key]) { scene.remove(stoneModels[key]); delete stoneModels[key]; }
+    const key = `${x}-${z}`; 
+    const model = stoneModels[key];
+    if (model) {
+        const duration = 300; // milliseconds for animation
+        const startTime = Date.now();
+
+        function animateCapture() {
+            const elapsedTime = Date.now() - startTime;
+            const progress = Math.min(elapsedTime / duration, 1); // 0 to 1
+
+            model.position.y = (0.1 + progress * 0.5); // Move up slightly
+            model.scale.setScalar(0.55 * (1 - progress)); // Shrink
+
+            // Fade out (if material is standard and allows transparency)
+            model.traverse(child => {
+                if (child.isMesh && child.material) {
+                    if (!child.material.userData) child.material.userData = {}; // Ensure userData exists
+                    if (child.material.userData.originalOpacity === undefined) {
+                        child.material.userData.originalOpacity = child.material.opacity;
+                    }
+                    child.material.transparent = true;
+                    child.material.opacity = child.material.userData.originalOpacity * (1 - progress);
+                }
+            });
+
+            if (progress < 1) {
+                requestAnimationFrame(animateCapture);
+            } else {
+                scene.remove(model);
+                // Optionally dispose of geometry/material here if memory becomes an issue
+                delete stoneModels[key];
+            }
+        }
+        animateCapture();
+    }
 }
 function onBoardClick(event) {
     if (gameOver || (gameMode === 'multiplayer' && currentPlayer !== localPlayerNum)) return;
@@ -236,87 +304,49 @@ function onWindowResize() {
 }
 
 // =================================================================
-// Go Game Logic (Refactored placeStone for AI simulation)
+// Go Game Logic
 // =================================================================
-function initializeBoardArray() { board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0)); }
-
-// This is the primary function for making a move on the *actual game board*.
-// It calls simulatePlaceStone to check validity and get results.
-function makeActualMove(row, col, player) {
-    const simulationResult = simulatePlaceStone(row, col, player, board); // Simulate on current global board
-
-    if (simulationResult === null) {
-        return null; // Move was illegal according to simulation
-    }
-
-    // Move is legal, apply changes to the global board
-    board = simulationResult.newBoard; 
-    
-    // Update Ko state based on the board *before* this successful move, if captures occurred
-    if (simulationResult.captures.length > 0) {
-        // Create a representation of the board *before* this move (excluding the placed stone)
-        // This can be simplified to just using the state of `board` before it was updated by `simulationResult.newBoard`
-        // However, for Ko, we need the state *just before the capture*.
-        // A robust Ko might require a history, but for this, we'll use a simplified approach.
-        // We can store the string of `board` before `board = simulationResult.newBoard;`
-        // if `simulationResult.captures.length > 0`. For now, let `simulatePlaceStone` handle simple Ko.
-        
-        // If simulatePlaceStone handled Ko and it was valid, we can assume koState is managed there or is null.
-        // The koState used by simulatePlaceStone is the global one.
-        // If this move *created* a Ko situation for the *next* turn, we'd set global koState here.
-        // Let's assume simulatePlaceStone's Ko check is sufficient for AI.
-        // For actual moves, the `koState` will be updated based on the global board before this move *if* a capture occurred.
-        let boardStateBeforeThisMoveString = board.map(r => r.slice()); // Get current state (already updated from simulation)
-        boardStateBeforeThisMoveString[row][col] = 0; // Temporarily remove the stone just placed
-        simulationResult.captures.forEach(s => boardStateBeforeThisMoveString[s.row][s.col] = player === 1 ? 2 : 1); // Put back captured stones of opponent
-        koState = boardStateBeforeThisMoveString.map(r=>r.join('')).join('');
-
-    } else {
-        koState = null;
-    }
-
-    return simulationResult.captures; // Return only the captured stones from this move
+function getNeighbors(row, col) {
+    const neighbors = [];
+    if (row > 0) neighbors.push({ row: row - 1, col: col });
+    if (row < BOARD_SIZE - 1) neighbors.push({ row: row + 1, col: col });
+    if (col > 0) neighbors.push({ row: row, col: col - 1 });
+    if (col < BOARD_SIZE - 1) neighbors.push({ row: row, col: col + 1 });
+    return neighbors;
 }
-
-
+function initializeBoardArray() { board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0)); }
+function makeActualMove(row, col, player) {
+    const simulationResult = simulatePlaceStone(row, col, player, board); 
+    if (simulationResult === null) return null; 
+    board = simulationResult.newBoard; 
+    if (simulationResult.captures.length > 0) {
+        let boardBeforeThisMove = board.map(r => r.slice());
+        boardBeforeThisMove[row][col] = 0; 
+        simulationResult.captures.forEach(s => boardBeforeThisMove[s.row][s.col] = player === 1 ? 2 : 1); 
+        koState = boardBeforeThisMove.map(r=>r.join('')).join('');
+    } else koState = null;
+    return simulationResult.captures; 
+}
 function simulatePlaceStone(row, col, player, boardToSimulateOn) {
     if (boardToSimulateOn[row][col] !== 0) return null; 
-
     let tempBoard = boardToSimulateOn.map(r => r.slice()); 
     tempBoard[row][col] = player;
-    
     const opponent = player === 1 ? 2 : 1;
     let capturedStonesThisMove = [];
-
-    const neighbors = getNeighbors(row, col); // THIS FUNCTION MUST EXIST
+    const neighbors = getNeighbors(row, col);
     for (const n of neighbors) {
         if (tempBoard[n.row][n.col] === opponent) {
             const group = findGroup(n.row, n.col, tempBoard); 
-            if (group.liberties === 0) {
-                capturedStonesThisMove.push(...group.stones);
-            }
+            if (group.liberties === 0) capturedStonesThisMove.push(...group.stones);
         }
     }
-    
     capturedStonesThisMove.forEach(stone => tempBoard[stone.row][stone.col] = 0);
-
     const ownGroup = findGroup(row, col, tempBoard);
-    if (ownGroup.liberties === 0) {
-        return null; 
-    }
-    
+    if (ownGroup.liberties === 0) return null; 
     const boardString = tempBoard.map(r => r.join('')).join('');
-    // Compare with global koState (state of the *actual* board before the *previous* move that resulted in a single capture)
-    if (koState !== null && boardString === koState) { 
-        // This check is a simplification. True Ko involves a single stone capture repeating.
-        // If the AI move would revert to the exact board state that was previously identified as a Ko-inducing state
-        // by the opponent's single-stone capture, then it's a Ko.
-        return null; 
-    }
-        
+    if (koState !== null && boardString === koState) return null; 
     return { newBoard: tempBoard, captures: capturedStonesThisMove };
 }
-
 function findGroup(startRow, startCol, boardState) {
     const player = boardState[startRow][startCol];
     if (player === 0) return { stones: [], liberties: 0 };
@@ -341,15 +371,6 @@ function findGroup(startRow, startCol, boardState) {
     }
     return { stones: groupStones, liberties: libertyPoints.size };
 }
-// **ENSURE THIS FUNCTION IS DEFINED IN THE GLOBAL SCOPE or accessible scope**
-function getNeighbors(row, col) {
-    const neighbors = [];
-    if (row > 0) neighbors.push({ row: row - 1, col: col });
-    if (row < BOARD_SIZE - 1) neighbors.push({ row: row + 1, col: col });
-    if (col > 0) neighbors.push({ row: row, col: col - 1 });
-    if (col < BOARD_SIZE - 1) neighbors.push({ row: row, col: col + 1 });
-    return neighbors;
-}
 
 // =================================================================
 // AI Logic
@@ -358,29 +379,20 @@ function getAIMove() {
     let bestScore = -Infinity; let bestMoves = []; const availableMoves = [];
     for (let r = 0; r < BOARD_SIZE; r++) { for (let c = 0; c < BOARD_SIZE; c++) { if (board[r][c] === 0) availableMoves.push({ r, c }); } }
     if(availableMoves.length === 0) return {pass: true};
-
     for (const move of availableMoves) {
         let score = 0;
         const simulationResult = simulatePlaceStone(move.r, move.c, 2, board.map(r => r.slice())); 
-        
         if (simulationResult === null) continue; 
-        
         const { newBoard: simBoard, captures: simCaptures } = simulationResult;
-
         score += simCaptures.length * 100;
-        
         const neighbors = getNeighbors(move.r, move.c);
         for (const n of neighbors) { 
             if (simBoard[n.row][n.col] === 1) { 
                 const group = findGroup(n.row, n.col, simBoard); 
-                if (group.liberties === 1) { 
-                    score += 25;
-                } else if (group.liberties === 2 && simCaptures.length === 0) { 
-                    score += 10;
-                }
+                if (group.liberties === 1) score += 25;
+                else if (group.liberties === 2 && simCaptures.length === 0) score += 10;
             }
         }
-        // Check if the move saves an AI group from atari
         const aiOwnGroupAfterMove = findGroup(move.r, move.c, simBoard);
         if (aiOwnGroupAfterMove.liberties > 1) {
             for(const n of neighbors) {
@@ -393,9 +405,7 @@ function getAIMove() {
                 }
             }
         }
-        
         for (const n of neighbors) { if (simBoard[n.row][n.col] === 2) score += 1; }
-        
         if (currentDifficulty !== 'easy') { 
             const edgeDist = Math.min(move.r, move.c, BOARD_SIZE - 1 - move.r, BOARD_SIZE - 1 - move.c); 
             if (edgeDist === 0) score += 3;  if (edgeDist <= 2) score += 1;  
@@ -403,7 +413,6 @@ function getAIMove() {
         if (score > bestScore) { bestScore = score; bestMoves = [move]; } 
         else if (score === bestScore) bestMoves.push(move);
     }
-        
     if (bestMoves.length > 0) return bestMoves[Math.floor(Math.random() * bestMoves.length)];
     else return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : {pass: true};
 }
@@ -431,14 +440,11 @@ function startNewAIGame() {
     initThreeJS(); updateStatusText(`Playing vs. AI (${currentDifficulty}).`); updateTurnText();
     passTurnButton.classList.remove('hidden'); closeModal(gameSetupModal);
 }
-
 function handlePlayerMove(row, col) { 
-    const capturedStones = makeActualMove(row, col, currentPlayer); // Use makeActualMove
-
+    const capturedStones = makeActualMove(row, col, currentPlayer); 
     if (capturedStones !== null) { 
         consecutivePasses = 0;
         addStoneTo3DScene(col, row, currentPlayer);
-        
         if (capturedStones.length > 0) {
             captures[currentPlayer] += capturedStones.length;
             capturedStones.forEach(stone => removeStoneFrom3DScene(stone.col, stone.row));

@@ -4,12 +4,14 @@
 
 // --- Constants ---
 const BOARD_SIZE = 9; // 9x9 board for faster games
+// This map now holds ONLY your specified model paths.
 const PIECE_MODEL_PATHS = {
     'Achilles': 'assets/achilles.glb',
     'War Elephant': 'assets/war_elephant.glb',
     'Knight Horse': 'assets/knight_horse.glb',
     'Aztec': 'assets/aztec.glb'
 };
+const DEFAULT_PIECE_KEY = 'Achilles'; // New default piece
 
 // --- DOM Element References ---
 const gameContainer = document.getElementById('game-container');
@@ -64,11 +66,11 @@ let consecutivePasses = 0;
 let captures = { 1: 0, 2: 0 };
 let koState = null; // Stores board state to prevent Ko recaptures
 
-let player1Settings = { uid: null, color: '#222222', piece: 'zeus' }; // Default piece name
-let player2Settings = { uid: null, color: '#FFFFFF', piece: 'zeus' }; // Default piece name
+let player1Settings = { uid: null, color: '#222222', piece: DEFAULT_PIECE_KEY };
+let player2Settings = { uid: null, color: '#FFFFFF', piece: DEFAULT_PIECE_KEY };
 
 // NOTE: We do not declare 'db' or 'auth' here because they are already
-// created in the global scope by firebase.js. This fixes the second error.
+// created in the global scope by firebase.js.
 
 // =================================================================
 // Initial Setup
@@ -81,18 +83,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function waitForAuthAndSetupUI() {
-    // Check if auth is available before using it
     if (typeof auth !== 'undefined') {
         auth.onAuthStateChanged(user => {
             if (user) {
-                player1Settings.uid = user.uid; // Set local player UID
+                player1Settings.uid = user.uid; 
                 checkUrlForGameToJoin();
             } else {
                 statusText.textContent = "Connecting to game services...";
             }
         });
     } else {
-        // This might happen if firebase.js fails to load, so we handle it gracefully.
         console.error("Firebase Auth not available. Check script loading.");
         statusText.textContent = "Error: Cannot connect to Authentication services.";
     }
@@ -193,7 +193,7 @@ function addStoneTo3DScene(x, z, player) {
     if (stoneModels[key]) return; // Stone already exists visually
 
     const settings = player === 1 ? player1Settings : player2Settings;
-    const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS['zeus']; // Default to Zeus if invalid
+    const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY]; // Fallback to default
     
     const loader = new THREE.GLTFLoader();
     loader.load(modelPath, gltf => {
@@ -270,22 +270,15 @@ function initializeBoardArray() {
     board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0));
 }
 
-/**
- * Main function to attempt placing a stone. Validates the move,
- * checks for captures, and handles suicide and Ko rules.
- * @returns {Array|null} A list of captured stones, or null if the move is invalid.
- */
 function placeStone(row, col, player) {
-    if (board[row][col] !== 0) return null; // Invalid move: point is not empty
+    if (board[row][col] !== 0) return null; 
 
-    // Create a temporary board to test the move
     let tempBoard = board.map(r => r.slice());
     tempBoard[row][col] = player;
     
     const opponent = player === 1 ? 2 : 1;
     let capturedStones = [];
 
-    // 1. Check for captures of opponent stones
     const neighbors = getNeighbors(row, col);
     for (const n of neighbors) {
         if (tempBoard[n.row][n.col] === opponent) {
@@ -296,25 +289,20 @@ function placeStone(row, col, player) {
         }
     }
     
-    // Remove captured stones from the temporary board
     capturedStones.forEach(stone => tempBoard[stone.row][stone.col] = 0);
 
-    // 2. Check for suicide
     const ownGroup = findGroup(row, col, tempBoard);
     if (ownGroup.liberties === 0) {
-        return null; // Invalid move: suicide
+        return null; 
     }
     
-    // 3. Check for Ko
     const boardString = tempBoard.map(r => r.join('')).join('');
     if (boardString === koState) {
-        return null; // Invalid move: Ko
+        return null; 
     }
     
-    // If we've reached here, the move is valid.
-    // Update the real board and return captures.
     if (capturedStones.length > 0) {
-        koState = board.map(r => r.join('')).join(''); // Store pre-capture state for Ko
+        koState = board.map(r => r.join('')).join(''); 
     } else {
         koState = null;
     }
@@ -323,45 +311,6 @@ function placeStone(row, col, player) {
     return capturedStones;
 }
 
-/**
- * Simulate placing a stone on a given board and koState, without mutating global state.
- * Returns null if move is illegal, or {capturedStones, tempBoard, newKoState} if legal.
- */
-function simulatePlaceStone(row, col, player, boardState, koStateSim) {
-    if (boardState[row][col] !== 0) return null;
-
-    let tempBoard = boardState.map(r => r.slice());
-    tempBoard[row][col] = player;
-
-    const opponent = player === 1 ? 2 : 1;
-    let capturedStones = [];
-
-    const neighbors = getNeighbors(row, col);
-    for (const n of neighbors) {
-        if (tempBoard[n.row][n.col] === opponent) {
-            const group = findGroup(n.row, n.col, tempBoard);
-            if (group.liberties === 0) {
-                capturedStones.push(...group.stones);
-            }
-        }
-    }
-
-    capturedStones.forEach(stone => tempBoard[stone.row][stone.col] = 0);
-
-    const ownGroup = findGroup(row, col, tempBoard);
-    if (ownGroup.liberties === 0) return null;
-
-    const boardString = tempBoard.map(r => r.join('')).join('');
-    if (boardString === koStateSim) return null;
-
-    return { capturedStones, tempBoard, newKoState: capturedStones.length > 0 ? boardState.map(r => r.join('')).join('') : null };
-}
-
-/**
- * Finds a connected group of stones and its liberties.
- * Uses a Breadth-First Search (BFS) algorithm.
- * @returns {{stones: Array, liberties: number}}
- */
 function findGroup(startRow, startCol, boardState) {
     const player = boardState[startRow][startCol];
     if (player === 0) return { stones: [], liberties: 0 };
@@ -418,38 +367,45 @@ function getAIMove() {
         }
     }
     
-    if (availableMoves.length === 0) return { pass: true };
+    if(availableMoves.length === 0) return {pass: true};
 
     for (const move of availableMoves) {
         let score = 0;
-        // Use simulation helper
-        const simResult = simulatePlaceStone(move.r, move.c, 2, board, koState);
-        if (!simResult) continue;
+        const tempBoard = board.map(r => r.slice());
+        
+        const capturedStones = placeStone(move.r, move.c, 2); 
+        if (capturedStones === null) continue; 
 
-        const { capturedStones, tempBoard } = simResult;
         score += capturedStones.length * 100;
+        board = tempBoard; // Revert to pre-move state for next sim
 
-        // Heuristics: use tempBoard for group checks
         const neighbors = getNeighbors(move.r, move.c);
         for (const n of neighbors) {
-            if (tempBoard[n.row][n.col] === 1) {
-                const group = findGroup(n.row, n.col, tempBoard);
-                if (group.liberties === 2) score += 25;
+            if (board[n.row][n.col] === 1) { 
+                const group = findGroup(n.row, n.col, board);
+                if (group.liberties === 2) { 
+                    score += 25;
+                }
             }
         }
+
         for (const n of neighbors) {
-            if (tempBoard[n.row][n.col] === 2) {
-                const group = findGroup(n.row, n.col, tempBoard);
-                if (group.liberties === 1) score += 50;
+            if (board[n.row][n.col] === 2) {
+                const group = findGroup(n.row, n.col, board);
+                if (group.liberties === 1) {
+                    score += 50; 
+                }
             }
         }
+        
         for (const n of neighbors) {
-            if (tempBoard[n.row][n.col] === 2) score += 1;
+            if (board[n.row][n.col] === 2) score += 1;
         }
-        if (currentDifficulty !== 'easy') {
+
+        if (difficulty !== 'easy') {
             const edgeDist = Math.min(move.r, move.c, BOARD_SIZE - 1 - move.r, BOARD_SIZE - 1 - move.c);
-            if (edgeDist === 0) score += 3;
-            if (edgeDist <= 2) score += 1;
+            if (edgeDist === 0) score += 3; 
+            if (edgeDist <= 2) score += 1; 
         }
 
         if (score > bestScore) {
@@ -459,11 +415,13 @@ function getAIMove() {
             bestMoves.push(move);
         }
     }
+    
+    board = board.map(r => r.slice()); 
 
     if (bestMoves.length > 0) {
         return bestMoves[Math.floor(Math.random() * bestMoves.length)];
     } else {
-        return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : { pass: true };
+        return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : {pass: true};
     }
 }
 
@@ -498,9 +456,9 @@ function startNewAIGame() {
     gameOver = false;
     
     player1Settings.color = playerColorInput.value;
-    player1Settings.piece = playerPieceSelect.value; // Get selected piece
+    player1Settings.piece = playerPieceSelect.value; 
     player2Settings.color = player1Settings.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
-    player2Settings.piece = 'zeus'; // AI can use a default piece
+    player2Settings.piece = DEFAULT_PIECE_KEY; // AI uses the default piece
     
     initThreeJS();
     updateStatusText(`Playing vs. AI (${currentDifficulty}).`);
@@ -512,7 +470,7 @@ function startNewAIGame() {
 function handlePlayerMove(row, col) {
     const captured = placeStone(row, col, currentPlayer);
 
-    if (captured !== null) { // Move was legal
+    if (captured !== null) { 
         consecutivePasses = 0;
         addStoneTo3DScene(col, row, currentPlayer);
         
@@ -522,7 +480,6 @@ function handlePlayerMove(row, col) {
             updateScoreUI();
         }
 
-        // Switch player
         currentPlayer = (currentPlayer === 1) ? 2 : 1;
 
         if (gameMode === 'multiplayer') {
@@ -534,7 +491,6 @@ function handlePlayerMove(row, col) {
             }
         }
     } else {
-        // Illegal move indication (e.g., flash screen red briefly)
         console.log("Illegal move attempted.");
     }
 }
@@ -589,7 +545,7 @@ function endGame() {
 function determineWinner() {
     if (captures[1] > captures[2]) return 1;
     if (captures[2] > captures[1]) return 2;
-    return 0; // Draw
+    return 0; 
 }
 
 function updateScoreUI() {
@@ -622,7 +578,7 @@ async function createMultiplayerGame() {
     
     player1Settings.uid = auth.currentUser.uid;
     player1Settings.color = playerColorInput.value;
-    player1Settings.piece = playerPieceSelect.value; // Get selected piece
+    player1Settings.piece = playerPieceSelect.value; 
     
     const newGameData = {
         player1: player1Settings, player2: null,
@@ -659,7 +615,7 @@ async function joinMultiplayerGame(gameId) {
         localPlayerNum = 2;
         player2Settings.uid = auth.currentUser.uid;
         player2Settings.color = gameData.player1.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
-        player2Settings.piece = playerPieceSelect.value; // P2 selects their piece
+        player2Settings.piece = playerPieceSelect.value; 
         
         await gameRef.update({ player2: player2Settings, status: 'active' });
         activeGameId = gameId;
@@ -705,17 +661,16 @@ function listenToGameUpdates(gameId) {
 }
 
 function sync3DAndUI(gameData) {
-    if (!scene) return;
-    Object.values(stoneModels).forEach(model => scene.remove(model));
-    stoneModels = {};
-    for(let r=0; r<BOARD_SIZE; r++) {
-        for(let c=0; c<BOARD_SIZE; c++) {
-            if(gameData.board[r][c] !== 0) {
-                addStoneTo3DScene(c, r, gameData.board[r][c]);
-            }
-        }
-    }
-    updateScoreUI();
+     Object.values(stoneModels).forEach(model => scene.remove(model));
+     stoneModels = {};
+     for(let r=0; r<BOARD_SIZE; r++) {
+         for(let c=0; c<BOARD_SIZE; c++) {
+             if(gameData.board[r][c] !== 0) {
+                 addStoneTo3DScene(c, r, gameData.board[r][c]);
+             }
+         }
+     }
+     updateScoreUI();
 }
 
 async function updateGameInFirebase(dataToUpdate) {

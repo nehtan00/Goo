@@ -1,6 +1,23 @@
 // =================================================================
-// Mythos Go - main.js (Final Visual Polish)
+// Mythos Go - main.js (ES Module, Final Visual Polish)
 // =================================================================
+
+// --- ES6 Module Imports ---
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// Attempt to import RoundedBoxGeometry, a fallback to BoxGeometry is in createFloatingGridBoard
+// Note: The path 'three/addons/geometries/RoundedBoxGeometry.js' is based on the import map in index.html
+// If this specific path doesn't work, it means unpkg might structure JSM differently or it's not a standard export.
+let RoundedBoxGeometry;
+try {
+    const RBox = await import('three/addons/geometries/RoundedBoxGeometry.js');
+    RoundedBoxGeometry = RBox.RoundedBoxGeometry;
+} catch (e) {
+    console.warn("Could not import RoundedBoxGeometry dynamically, will try THREE.RoundedBoxGeometry or fallback.", e);
+    // We'll try THREE.RoundedBoxGeometry later, or fallback if that also fails
+}
+
 
 // --- Constants ---
 const BOARD_SIZE = 9;
@@ -25,7 +42,6 @@ let boardMesh;
 let stoneModels = {};
 
 // --- Game State Variables ---
-// ... (game state variables remain the same) ...
 let board = [];
 let currentPlayer = 1;
 let gameMode = null;
@@ -140,7 +156,7 @@ function initThreeJS() {
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     gameContainer.appendChild(renderer.domElement);
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls = new OrbitControls(camera, renderer.domElement); 
     controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2); controls.enableDamping = true;
     controls.dampingFactor = 0.05; controls.minDistance = BOARD_SIZE * 0.8; controls.maxDistance = BOARD_SIZE * 3;
     controls.maxPolarAngle = Math.PI / 2 - 0.02; 
@@ -158,27 +174,28 @@ function initThreeJS() {
 }
 
 function createFloatingGridBoard() {
-    const boardThickness = 0.6; 
-    const boardRadius = 0.2; 
-    const boardSegments = 5; 
+    const boardThickness = 0.5; 
+    const boardRadius = 0.3; 
+    const boardSegments = 6; 
 
     let boardGeom;
-    // Check if THREE.RoundedBoxGeometry is loaded (it's a module, might not be global)
-    // For robustness, we'll check if the class THREE.RoundedBoxGeometry exists.
-    // If not, fallback to BoxGeometry.
-    if (typeof THREE.RoundedBoxGeometry === 'function') {
-        boardGeom = new THREE.RoundedBoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
-    } else {
-        console.warn("THREE.RoundedBoxGeometry not found or not loaded as a global, using BoxGeometry as fallback.");
+    // Check if the dynamically imported RoundedBoxGeometry is available
+    if (RoundedBoxGeometry) { 
+        boardGeom = new RoundedBoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
+    } else if (typeof THREE.RoundedBoxGeometry === 'function') { // Check if it was loaded globally somehow
+         boardGeom = new THREE.RoundedBoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
+    }
+    else {
+        console.warn("RoundedBoxGeometry not available, using BoxGeometry as fallback.");
         boardGeom = new THREE.BoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE);
     }
     
     const boardMat = new THREE.MeshStandardMaterial({ 
-        color: 0x2c2c2c, 
+        color: 0x2a2a2a, 
         transparent: true,
-        opacity: 0.6, 
-        roughness: 0.7,
-        metalness: 0.1
+        opacity: 0.45, 
+        roughness: 0.8,
+        metalness: 0.05
     });
     boardMesh = new THREE.Mesh(boardGeom, boardMat);
     boardMesh.position.set((BOARD_SIZE - 1) / 2, -boardThickness / 2, (BOARD_SIZE - 1) / 2);
@@ -189,42 +206,40 @@ function createFloatingGridBoard() {
 }
 
 function drawBoardGridLines(boardCurrentThickness) {
-    const lineThickness = 0.035; // Slightly thicker grid lines
-    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0 }); // Darker, less shiny
+    const lineThickness = 0.04; 
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0 }); 
+    const lineY = 0.015; // Position lines slightly above the board's true top (y=0)
     
-    // Y position for lines, ensuring they are on top of the board slab
-    // The board's top surface is at y=0 (since its center is at -boardThickness/2 and height is boardThickness)
-    // So lines should be slightly above y=0.
-    const lineY = 0.01; 
-    
-    const gridLinesGroup = new THREE.Group(); // Group lines to add them to boardMesh later if needed, or directly to scene
+    const gridLinesGroup = new THREE.Group();
+    // Since boardMesh center is at world Y = -boardThickness/2, its top surface is at Y = 0.
+    // Lines should be at lineY in world space.
     
     for (let i = 0; i < BOARD_SIZE; i++) {
         // Horizontal lines (along Z axis)
-        const hGeom = new THREE.BoxGeometry(BOARD_SIZE, lineThickness, lineThickness);
+        const hGeom = new THREE.BoxGeometry(BOARD_SIZE - 0.05, lineThickness, lineThickness);
         const hLine = new THREE.Mesh(hGeom, gridLineMaterial);
-        // Position relative to board center, then place at grid line position
-        hLine.position.set((BOARD_SIZE - 1) / 2, lineY, i); 
+        hLine.position.set((BOARD_SIZE -1) / 2, lineY, i); 
         gridLinesGroup.add(hLine);
 
         // Vertical lines (along X axis)
-        const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, BOARD_SIZE);
+        const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, BOARD_SIZE - 0.05);
         const vLine = new THREE.Mesh(vGeom, gridLineMaterial);
-        vLine.position.set(i, lineY, (BOARD_SIZE - 1) / 2);
+        vLine.position.set(i, lineY, (BOARD_SIZE -1) / 2);
         gridLinesGroup.add(vLine);
     }
-    scene.add(gridLinesGroup); // Add lines directly to scene
+    scene.add(gridLinesGroup);
 }
+
 
 function addStoneTo3DScene(x, z, player) { 
     const key = `${x}-${z}`; if (stoneModels[key]) return;
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
-    const pieceBaseScaleMultiplier = 1.85; 
-    const pieceYOnBoard = 0.8; // Y for piece base, slightly above grid lines (at 0.01)
+    const pieceBaseScaleMultiplier = 1.3=75; // Further increased scale
+    const pieceYOnBoard = 0.85;    // Y for PIECE BASE to sit on board (above grid lines at ~0.015 + lineThickness/2)
 
-    const loader = new THREE.GLTFLoader();
+    const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {
         const model = gltf.scene; 
         const box = new THREE.Box3().setFromObject(model);
@@ -238,40 +253,36 @@ function addStoneTo3DScene(x, z, player) {
         model.scale.set(scaleFactor, scaleFactor, scaleFactor);
         
         const newBox = new THREE.Box3().setFromObject(model);
-        
-        // Shift model so its visual base (min.y of bounding box) aligns with its local y=0
+        // Shift model so its visual base (min.y of bounding box after scaling) aligns with its local y=0
         model.position.y -= newBox.min.y; 
-        
-        // Set world position for animation start (current x and z are grid coords 0-8)
+                
         const animationStartY = pieceYOnBoard + 2.0; 
-        model.position.set(x, animationStartY, z); 
+        model.position.set(x, animationStartY, z); // Set world position of model's local origin (now its base)
 
-        console.log(`Piece: ${settings.piece} at grid(${x},${z}). BBox MinY After Shift: ${newBox.min.y.toFixed(3)}, MaxY: ${newBox.max.y.toFixed(3)}, Height: ${(newBox.max.y - newBox.min.y).toFixed(3)}. Final Scale: ${model.scale.x.toFixed(2)}. Anim StartY: ${model.position.y.toFixed(2)}, TargetY: ${pieceYOnBoard}`);
+        console.log(`Piece: ${settings.piece}, Grid(${x},${z}). Model Height After Scale: ${(newBox.max.y - newBox.min.y).toFixed(3)}. Final Scale: ${model.scale.x.toFixed(2)}. Anim Start Y: ${model.position.y.toFixed(2)}, TargetY for base: ${pieceYOnBoard}`);
 
         model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true;
             child.material = new THREE.MeshStandardMaterial({
                 color: new THREE.Color(settings.color), 
-                roughness: 0.3, 
-                metalness: 0.2 
-            }); 
+                roughness: 0.25, metalness: 0.25 }); 
         }});
         scene.add(model); stoneModels[key] = model;
         
         let currentY = model.position.y; 
         const targetY = pieceYOnBoard; 
-        const dropSpeed = 0.12; 
+        const dropSpeed = 0.10; 
 
         function animateDrop() { 
             if (currentY > targetY) { 
-                currentY -= dropSpeed * Math.max(0.5, (currentY - targetY));
+                currentY -= dropSpeed * Math.max(0.3, (currentY - targetY));
                 model.position.y = Math.max(currentY, targetY); 
                 requestAnimationFrame(animateDrop); 
             } else model.position.y = targetY; 
         }
         animateDrop();
     }, undefined, error => { console.error(`Model load error for ${modelPath}:`, error);
-        const stoneRadius = 0.35 * pieceBaseScaleMultiplier; 
-        const stoneHeight = 0.15 * pieceBaseScaleMultiplier;
+        const stoneRadius = 0.3 * pieceBaseScaleMultiplier; 
+        const stoneHeight = 0.1 * pieceBaseScaleMultiplier;
         const geom = new THREE.CylinderGeometry(stoneRadius, stoneRadius, stoneHeight, 24);
         const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(settings.color), roughness: 0.5, metalness: 0.1 });
         const piece = new THREE.Mesh(geom, mat); piece.castShadow = true; 
@@ -279,8 +290,8 @@ function addStoneTo3DScene(x, z, player) {
         scene.add(piece); stoneModels[key] = piece;
         
         let currentY = piece.position.y; const targetY = pieceYOnBoard + stoneHeight/2; 
-        const dropSpeed = 0.12;
-        function animateDropFallback() { if (currentY > targetY) { currentY -= dropSpeed * Math.max(0.5, (currentY - targetY));
+        const dropSpeed = 0.10;
+        function animateDropFallback() { if (currentY > targetY) { currentY -= dropSpeed * Math.max(0.3, (currentY - targetY));
             piece.position.y = Math.max(currentY, targetY); requestAnimationFrame(animateDropFallback); } else piece.position.y = targetY; }
         animateDropFallback();
     });
@@ -299,14 +310,12 @@ function removeStoneFrom3DScene(x, z) {
         function animateCapture() {
             const elapsedTime = Date.now() - startTime;
             const progress = Math.min(elapsedTime / duration, 1); 
-            
-            model.position.y = startY + progress * 0.7; 
+            model.position.y = startY + progress * 0.8; 
             model.scale.set(
                 originalScaleX * (1 - progress * progress),
                 originalScaleY * (1 - progress * progress),
                 originalScaleZ * (1 - progress * progress)
             );
-
             model.traverse(child => {
                 if (child.isMesh && child.material) {
                     if (!child.material.userData) child.material.userData = {}; 
@@ -345,7 +354,7 @@ function onWindowResize() {
 }
 
 // =================================================================
-// Go Game Logic
+// Go Game Logic (Unchanged from previous version)
 // =================================================================
 function getNeighbors(row, col) {
     const neighbors = [];
@@ -414,7 +423,7 @@ function findGroup(startRow, startCol, boardState) {
 }
 
 // =================================================================
-// AI Logic
+// AI Logic (Unchanged)
 // =================================================================
 function getAIMove() { 
     let bestScore = -Infinity; let bestMoves = []; const availableMoves = [];
@@ -459,7 +468,7 @@ function getAIMove() {
 }
 
 // =================================================================
-// Game Flow & UI
+// Game Flow & UI (Unchanged)
 // =================================================================
 function resetGame() {
     if (unsubscribeGameListener) unsubscribeGameListener();

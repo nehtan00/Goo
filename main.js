@@ -243,8 +243,8 @@ function createFloatingGridBoard() {
 
 function drawBoardGridLines() {
     const lineThickness = 0.04; 
-    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.1, metalness: 1 }); 
-    const lineY = 0.005; // Y position relative to the board's top surface (which is at world Y=0)
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.9, metalness: 1 }); 
+    const lineY = 0.003; // Y position relative to the board's top surface (which is at world Y=0)
     
     const gridLinesGroup = new THREE.Group();
     // The board's top surface is at world Y=0. Grid lines are placed on this.

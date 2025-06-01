@@ -1,14 +1,15 @@
 /* =================================================================
-// Mythos Go - style.css (Inset Game Container & Polish)
+// Mythos Go - style.css (Stone Relief Carving Effect)
 // ================================================================= */
 
 /* --- Global Styles & Font --- */
 :root {
     --primary-font: 'Cinzel', serif;
-    --text-color: #333;
-    --background-color: #f0f0f0; 
+    --text-color: #2c3e50; /* Darker, slightly desaturated blue/grey for text */
+    /* For the "marble wall" background - REPLACE with your texture path */
+    --marble-wall-texture: url('assets/wall.jpg'); 
+    --page-background-fallback: #e8e8e8; /* Fallback if texture fails */
     --border-color: #000000;
-    --marble-board-fallback-color: #e1e1e1; 
 }
 
 html, body {
@@ -18,8 +19,12 @@ html, body {
 }
 
 body {
-    font-family: Arial, sans-serif;
-    background-color: var(--background-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Cleaner sans-serif */
+    background-image: var(--marble-wall-texture);
+    background-color: var(--page-background-fallback); /* Fallback */
+    background-size: cover; /* Cover the entire page */
+    background-attachment: fixed; /* Keep background fixed during scroll */
+    background-position: center center;
     color: var(--text-color);
     display: flex;
     flex-direction: column;
@@ -29,9 +34,10 @@ body {
 
 /* --- Header --- */
 header {
-    background-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.85); /* Slightly transparent white for a softer look on marble */
     padding: 15px 30px;
-    border-bottom: 2px solid var(--border-color);
+    border-bottom: 1px solid rgba(0,0,0,0.2); /* Softer border */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -47,29 +53,40 @@ header {
     gap: 15px;
 }
 
-.logo-fish {
-    width: 50px;
-    height: auto;
+.logo-fish { /* Assuming this class is for your custom logo image now */
+    width: 45px;  /* Adjust as needed */
+    height: 45px; /* Adjust as needed */
+    object-fit: contain;
 }
 
 header h1 {
     font-family: var(--primary-font);
-    font-size: 1.8em;
+    font-size: 1.7em; /* Slightly adjusted */
     font-weight: 700;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
     margin: 0;
-    color: var(--border-color);
+    color: #333;
 }
 
-header nav {
-    margin-left: auto;
+header nav button {
+    background-color: transparent;
+    border: 1px solid #777;
+    color: #555;
+    padding: 8px 18px;
+    border-radius: 20px; /* Pill-shaped buttons */
 }
+header nav button:hover {
+    background-color: #333;
+    color: #fff;
+    border-color: #333;
+}
+
 
 /* --- Main Content & Game Area --- */
 main {
     flex-grow: 1;
-    padding: 20px;
+    padding: 25px; /* Increased padding */
     display: flex;
     flex-direction: column;
     align-items: center; 
@@ -81,27 +98,35 @@ main {
 #game-container {
     width: 90vw;
     height: 90vw; 
-    max-width: 550px; 
-    max-height: 550px;
-    margin: 20px auto; 
-    border-radius: 10px; /* Slightly more rounded */
-    /* **NEW: Inset shadow for "sunken in" look** */
+    max-width: 580px; /* Max size for the container */
+    max-height: 580px;
+    margin: 25px auto; 
+    border-radius: 12px; /* Softer rounding */
+    
+    /* **STONE RELIEF CARVING EFFECT** */
+    background-color: rgba(0,0,0,0.05); /* Darker, slightly transparent base for the "carved out" area */
+    /* Multiple inset shadows for chiseled look - light from top-left assumed */
     box-shadow: 
-        inset 0 0 10px rgba(0,0,0,0.3), /* Inner shadow for depth */
-        0 5px 15px rgba(0,0,0,0.1);   /* Outer subtle shadow for lift */
+        inset 3px 3px 6px rgba(0,0,0,0.4),     /* Darker shadow for top/left inner edges */
+        inset -2px -2px 5px rgba(255,255,255,0.25), /* Lighter highlight for bottom/right inner edges */
+        2px 2px 5px rgba(0,0,0,0.1); /* Very subtle outer shadow to lift the whole "page" if needed, optional */
+
     cursor: pointer;
-    background-color: #333; /* Darker background for the container itself before 3D scene loads */
     overflow: hidden; 
-    border: 3px solid #444; /* Thicker border to enhance inset feel */
-    padding: 5px; /* Small padding so 3D scene doesn't touch border */
+    border: 1px solid rgba(0,0,0,0.1); /* Very subtle border, almost invisible */
+    padding: 8px; /* Padding inside the carving before the 3D board starts */
     box-sizing: border-box;
 }
 
 #game-info-panel {
     text-align: center;
-    margin-top: 15px;
+    margin-top: 20px;
     width: 100%;
-    max-width: 550px; 
+    max-width: 580px; 
+    background-color: rgba(255,255,255,0.6); /* Semi-transparent background for info panel */
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 #score-board {
@@ -111,6 +136,7 @@ main {
     font-family: var(--primary-font);
     font-weight: 700;
     margin-bottom: 10px;
+    color: #444;
 }
 
 #status-text {
@@ -118,56 +144,37 @@ main {
     font-weight: 700;
     font-size: 1.2rem;
     margin-top: 10px;
+    color: #333;
 }
 
 #turn-text {
     font-size: 1rem;
     min-height: 1.2em; 
+    color: #555;
 }
 
-/* --- Buttons --- */
-button {
-    font-family: var(--primary-font);
-    font-weight: 700;
-    text-transform: uppercase;
-    background: #fff;
-    border: 2px solid var(--border-color);
-    padding: 10px 20px;
-    margin: 5px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: var(--border-color);
-    border-radius: 4px; /* Slightly rounded buttons */
-}
-
-button:hover, button:focus {
-    background-color: var(--border-color);
-    color: #ffffff;
-    outline: none;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-#action-buttons {
-    margin-top: 15px;
-    display: flex; 
-    justify-content: center;
-    flex-wrap: wrap; 
+/* --- Action Buttons --- */
+#action-buttons button {
+    font-size: 0.9rem;
+    padding: 10px 22px;
+    border-radius: 25px; /* Pill shape */
+    border-width: 2px;
+    margin: 8px;
 }
 
 /* --- Footer --- */
 footer {
-    background-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent footer */
     color: #555;
     text-align: center;
     padding: 15px;
-    border-top: 2px solid var(--border-color);
+    border-top: 1px solid rgba(0,0,0,0.1); /* Softer border */
     font-size: 0.8em;
     letter-spacing: 0.5px;
     flex-shrink: 0; 
 }
 
-/* --- Modal Styles (Overhauled) --- */
+/* --- Modal Styles --- */
 .modal-overlay {
     position: fixed;
     z-index: 1000;
@@ -175,7 +182,7 @@ footer {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.7); /* Darker overlay */
     display: flex; 
     align-items: center;
     justify-content: center;
@@ -192,17 +199,17 @@ footer {
 }
 
 .modal-content {
-    background-color: #ffffff;
+    background-color: #fdfdfd; /* Slightly off-white modal background */
     padding: 30px;
-    border: 2px solid var(--border-color);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    border: 1px solid #ccc; /* Softer border for modals */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); /* More pronounced shadow for modals */
     width: 100%;
     max-width: 500px;
     position: relative;
     text-align: left;
     max-height: 90vh; 
     overflow-y: auto; 
-    border-radius: 8px;
+    border-radius: 10px; /* Rounded modal corners */
 }
 
 .modal-content.modal-large {
@@ -216,10 +223,12 @@ footer {
     margin-top: 0;
     margin-bottom: 25px;
     text-transform: uppercase;
-    color: var(--border-color);
+    color: var(--text-color);
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
 }
 
-.close-button {
+.close-button { /* Style remains largely the same, effective */
     position: absolute;
     top: 10px;
     right: 15px;
@@ -241,7 +250,7 @@ footer {
 
 /* --- Form Elements within Modals --- */
 .setup-section, .rules-section, .strategy-section {
-    border-top: 1px solid #ddd;
+    border-top: 1px solid #eee; /* Lighter separator */
     padding-top: 20px;
     margin-top: 20px;
 }
@@ -253,6 +262,7 @@ footer {
     display: block; 
     margin-bottom: 8px;
     font-weight: bold;
+    color: #555;
 }
 
 .modal-content input[type="text"],
@@ -261,26 +271,42 @@ footer {
     box-sizing: border-box; 
     padding: 10px;
     margin-bottom: 15px;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd; /* Lighter input border */
     border-radius: 4px;
     font-size: 1rem;
 }
+.modal-content input[type="text"]:focus,
+.modal-content select:focus {
+    border-color: #888;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
 
 .modal-content input[type="color"] {
     width: 50px;
     height: 50px;
     padding: 0;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     vertical-align: middle;
+    border-radius: 4px;
 }
 
-.modal-content button {
+.modal-content button { /* Primary action buttons in modals */
     display: block;
     width: 100%;
-    margin-top: 10px;
+    margin-top: 15px;
+    padding: 12px 20px;
+    background-color: #333;
+    color: #fff;
+    border-color: #333;
+}
+.modal-content button:hover {
+    background-color: #555;
+    border-color: #555;
 }
 
-.share-input-group {
+
+.share-input-group { /* Style remains effective */
     display: flex;
     gap: 10px;
     margin-bottom: 15px;
@@ -326,20 +352,26 @@ footer {
 }
 
 /* --- Responsive Design --- */
+@media (max-width: 768px) { /* Broader breakpoint for adjustments */
+    header h1 {
+        font-size: 1.4em;
+    }
+    #game-info-panel, #action-buttons {
+        max-width: 90vw;
+    }
+}
+
 @media (max-width: 600px) {
     header {
         flex-direction: column;
         gap: 15px;
-    }
-    header h1 {
-        font-size: 1.5em;
     }
     #game-container {
         width: 95vw;
         height: 95vw;
         max-width: none; 
         max-height: none;
-        padding: 3px; /* Adjust padding for smaller screens */
+        padding: 3px; 
     }
     .modal-content {
         padding: 20px;

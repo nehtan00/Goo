@@ -160,19 +160,19 @@ function initThreeJS() {
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.9; 
+    renderer.toneMappingExposure = 0.4; 
     renderer.outputEncoding = THREE.sRGBEncoding;
     gameContainer.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement); 
     controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2); controls.enableDamping = true;
     controls.dampingFactor = 0.05; controls.minDistance = BOARD_SIZE * 0.7; controls.maxDistance = BOARD_SIZE * 2.5;
     controls.maxPolarAngle = Math.PI / 2 - 0.02; 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2); // Reduced main hemisphere
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6); // Reduced main hemisphere
     hemiLight.position.set(0, 20, 0); scene.add(hemiLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);  // Reduced main directional
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);  // Reduced main directional
     dirLight.position.set(10, 15, 12); dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; scene.add(dirLight);
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.3); // Reduced fill light
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.1); // Reduced fill light
     fillLight.position.set(-10, 10, -5); scene.add(fillLight);
     createFloatingGridBoard(); 
     raycaster = new THREE.Raycaster(); mouse = new THREE.Vector2();

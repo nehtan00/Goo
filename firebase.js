@@ -4,13 +4,14 @@
 // Replace this with the configuration object from your Firebase project's settings.
 // Go to Project Overview > Project settings > General > Your apps > SDK setup and configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAn24mjnWAbmVevthpKDadNl0cLcBN3UH0",
+  authDomain: "gooues-bdd91.firebaseapp.com",
+  projectId: "gooues-bdd91",
+  storageBucket: "gooues-bdd91.firebasestorage.app",
+  messagingSenderId: "1095910317502",
+  appId: "1:1095910317502:web:c6f0e8c660964453642def"
 };
+
 
 // --- 2. Initialize Firebase App and Services ---
 // This sets up the core connection using your config.

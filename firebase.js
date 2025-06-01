@@ -1,33 +1,23 @@
 // This file initializes the connection to your Firebase project.
 
 // --- 1. Firebase Configuration ---
-// Replace this with the configuration object from your Firebase project's settings.
-// Go to Project Overview > Project settings > General > Your apps > SDK setup and configuration
+// These are your project's specific credentials.
 const firebaseConfig = {
-  apiKey: "AIzaSyAn24mjnWAbmVevthpKDadNl0cLcBN3UH0",
+  apiKey: "AIzaSyAn24mjnWAbmVevthpKDadNI0cLcBN3UH0",
   authDomain: "gooues-bdd91.firebaseapp.com",
   projectId: "gooues-bdd91",
-  storageBucket: "gooues-bdd91.firebasestorage.app",
+  storageBucket: "gooues-bdd91.appspot.com",
   messagingSenderId: "1095910317502",
-  appId: "1:1095910317502:web:c6f0e8c660964453642def"
+  appId: "1:1095910317502:web:2f1a603957866817c18569" // This is a common format, but double-check if issues persist.
 };
 
-
 // --- 2. Initialize Firebase App and Services ---
-// This sets up the core connection using your config.
 const app = firebase.initializeApp(firebaseConfig);
-
-// Get a reference to the Firestore database service.
 const db = firebase.firestore();
-
-// Get a reference to the Authentication service.
 const auth = firebase.auth();
 
 
 // --- 3. Anonymous Authentication ---
-// This is the key for our no-login multiplayer.
-// We sign the user in anonymously in the background. They get a unique, temporary ID
-// that we can use to identify them in a game session without them needing to create an account.
 auth.onAuthStateChanged(user => {
   if (user) {
     // User is signed in anonymously.
@@ -36,10 +26,33 @@ auth.onAuthStateChanged(user => {
     // User is signed out. Attempt to sign them in.
     auth.signInAnonymously().catch(error => {
       console.error("Anonymous sign-in failed:", error);
-      // Handle error, e.g., show a message to the user that the game can't connect.
       document.getElementById('status-text').textContent = "Error: Could not connect to game services. Please refresh the page.";
     });
   }
 });
 
 
+/*
+--- IMPORTANT: FIRESTORE SECURITY RULES ---
+You MUST set up security rules in your Firebase console for this to work.
+Go to your project's Firestore Database > Rules tab and paste the following:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Games collection
+    match /games/{gameId} {
+      // Anyone who is authenticated (even anonymously) can read a game's state.
+      allow read: if request.auth != null;
+      
+      // A new game can be created by any authenticated user.
+      allow create: if request.auth != null;
+
+      // A game can only be updated by one of the two players in that game.
+      // This prevents others from interfering with a game in progress.
+      allow update: if request.auth != null && (request.auth.uid == resource.data.player1.uid || request.auth.uid == resource.data.player2.uid);
+    }
+  }
+}
+
+*/

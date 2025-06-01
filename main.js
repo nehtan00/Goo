@@ -1,5 +1,5 @@
 // =================================================================
-// Mythos Go - main.js (Visual & Animation Overhaul)
+// Mythos Go - main.js (ReferenceError Fix)
 // =================================================================
 
 // --- Constants ---
@@ -11,11 +11,6 @@ const PIECE_MODEL_PATHS = {
     'Aztec': 'assets/aztec.glb'
 };
 const DEFAULT_PIECE_KEY = 'Achilles';
-// Using a more detailed marble texture. You can replace this with any tileable texture URL.
-const MARBLE_TEXTURE_URL = 'https://cc0textures.com/get?file=Marble015_1K-JPG.zip&type=JPG&map=Color'; // Example texture
-// Note: The above URL links to a ZIP. You'd need to extract the JPG and host it,
-// or find a direct JPG link. For simplicity, let's use a placeholder or a direct image link if possible.
-// Placeholder texture if the above fails:
 const FALLBACK_MARBLE_TEXTURE_URL = 'https://www.transparenttextures.com/patterns/getSubtleHex2.png';
 
 
@@ -89,7 +84,7 @@ function initEventListeners() {
     document.querySelectorAll('.close-button').forEach(button => {
         const modalId = button.getAttribute('data-modal-id');
         const modalToClose = document.getElementById(modalId);
-        if (modalToClose) { // Ensure modal exists before adding listener
+        if (modalToClose) {
              button.addEventListener('click', () => closeModal(modalToClose));
         } else {
             console.warn("Could not find modal for close button:", modalId);
@@ -125,7 +120,7 @@ function waitForAuthAndSetupUI() {
 function checkUrlForGameToJoin() {
     const urlParams = new URLSearchParams(window.location.search);
     const gameIdFromUrl = urlParams.get('game');
-    if (gameIdFromUrl && gameSetupModal) { // Ensure modals are assigned
+    if (gameIdFromUrl && gameSetupModal) {
         joinGameCodeInput.value = gameIdFromUrl;
         openModal(joinGameModal);
         statusText.textContent = `Attempting to join game: ${gameIdFromUrl}`;
@@ -141,24 +136,23 @@ function initThreeJS() {
     stoneModels = {};
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xdddddd); // Lighter background for contrast
+    scene.background = new THREE.Color(0xdddddd);
 
     camera = new THREE.PerspectiveCamera(45, gameContainer.clientWidth / gameContainer.clientHeight, 0.1, 1000);
     camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.5, BOARD_SIZE * 1.3);
-    camera.lookAt(BOARD_SIZE / 2, -1, BOARD_SIZE / 2); // Look slightly down onto the board
+    camera.lookAt(BOARD_SIZE / 2, -1, BOARD_SIZE / 2);
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     gameContainer.appendChild(renderer.domElement);
 
-    // Enhanced Lighting
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x888888, 1.2); // Softer overall light
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x888888, 1.2);
     hemiLight.position.set(0, 20, 0);
     scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0); // Main sunlight
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
     dirLight.position.set(15, 20, 10);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
@@ -170,15 +164,9 @@ function initThreeJS() {
     dirLight.shadow.camera.top = BOARD_SIZE;
     dirLight.shadow.camera.bottom = -BOARD_SIZE;
     scene.add(dirLight);
-    
-    // Optional: Point light for highlights
-    // const pointLight = new THREE.PointLight(0xffffff, 0.5, 100);
-    // pointLight.position.set(-10, 10, -10);
-    // scene.add(pointLight);
-
 
     createMarbleBoard3D();
-    drawBoardGridLines(); // Separate function for lines
+    drawBoardGridLines();
 
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
@@ -189,13 +177,11 @@ function initThreeJS() {
 
 function createMarbleBoard3D() {
     const textureLoader = new THREE.TextureLoader();
-    // Using a direct link to a seamless marble texture for demonstration.
-    // It's better to download and host your own textures.
     const marbleTexture = textureLoader.load(
-        'https://cdn.polyhaven.com/asset_img/primary/marble_01.png?height=1024', // Example direct link
-        () => { renderer.render(scene, camera); }, // Render once texture loads
+        'https://cdn.polyhaven.com/asset_img/primary/marble_01.png?height=1024',
+        () => { renderer.render(scene, camera); },
         undefined,
-        () => { // Fallback if texture fails
+        () => {
             console.warn("Failed to load primary marble texture, using fallback.");
             const fallbackTexture = textureLoader.load(FALLBACK_MARBLE_TEXTURE_URL);
             fallbackTexture.wrapS = fallbackTexture.wrapT = THREE.RepeatWrapping;
@@ -205,9 +191,9 @@ function createMarbleBoard3D() {
         }
     );
     marbleTexture.wrapS = marbleTexture.wrapT = THREE.RepeatWrapping;
-    marbleTexture.repeat.set(2, 2); // Adjust tiling as needed
+    marbleTexture.repeat.set(2, 2);
 
-    const boardThickness = 0.8; // Make the board thicker
+    const boardThickness = 0.8;
     const boardGeom = new THREE.BoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE);
     const boardMat = new THREE.MeshStandardMaterial({ 
         map: marbleTexture,
@@ -215,7 +201,6 @@ function createMarbleBoard3D() {
         metalness: 0.1 
     });
     boardMesh = new THREE.Mesh(boardGeom, boardMat);
-    // Position so top surface is at y=0
     boardMesh.position.set((BOARD_SIZE - 1) / 2, -boardThickness / 2, (BOARD_SIZE - 1) / 2);
     boardMesh.receiveShadow = true;
     scene.add(boardMesh);
@@ -223,8 +208,7 @@ function createMarbleBoard3D() {
 
 function drawBoardGridLines() {
     const material = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 });
-    const lineY = 0.01; // Slightly above the board surface (top of marble slab)
-    
+    const lineY = 0.01;
     for (let i = 0; i < BOARD_SIZE; i++) {
         let pointsH = [new THREE.Vector3(0, lineY, i), new THREE.Vector3(BOARD_SIZE - 1, lineY, i)];
         let geomH = new THREE.BufferGeometry().setFromPoints(pointsH);
@@ -237,38 +221,36 @@ function drawBoardGridLines() {
 }
 
 function addStoneTo3DScene(x, z, player) {
-    const key = `${col}-${row}`; // Using col, row as per board array
+    // FIX: Using the correct arguments 'x' and 'z' to create the key.
+    const key = `${x}-${z}`;
     if (stoneModels[key]) return;
 
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
-    const stoneRadius = 0.4; // For consistent size
-    const stoneHeight = 0.6; // Make pieces taller
+    const stoneRadius = 0.4;
+    const stoneHeight = 0.6;
 
     const loader = new THREE.GLTFLoader();
     loader.load(modelPath, gltf => {
         const model = gltf.scene;
         
-        // Calculate bounding box and scale to desired size
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        const desiredSize = stoneRadius * 2; // Diameter
+        const desiredSize = stoneRadius * 2;
         model.scale.multiplyScalar(desiredSize / maxDim);
         
-        // Recenter model after scaling
         const newBox = new THREE.Box3().setFromObject(model);
         const center = newBox.getCenter(new THREE.Vector3());
         model.position.sub(center);
 
-        // Start position for animation (above the board)
-        model.position.set(x, stoneHeight * 2, z); // x, z are grid coordinates here
+        model.position.set(x, stoneHeight * 2, z);
 
         model.traverse(child => {
             if (child.isMesh) {
                 child.castShadow = true;
-                child.receiveShadow = true; // Stones can receive shadows too
-                child.material = new THREE.MeshStandardMaterial({ // Force standard material for consistent lighting
+                child.receiveShadow = true;
+                child.material = new THREE.MeshStandardMaterial({
                     color: settings.color,
                     roughness: 0.4,
                     metalness: 0.2
@@ -278,11 +260,9 @@ function addStoneTo3DScene(x, z, player) {
         scene.add(model);
         stoneModels[key] = model;
 
-        // Placement Animation
         let currentY = model.position.y;
-        const targetY = stoneHeight / 2; // Final Y position on board
+        const targetY = stoneHeight / 2;
         const dropSpeed = 0.2;
-
         function animateDrop() {
             if (currentY > targetY) {
                 currentY -= dropSpeed;
@@ -304,7 +284,6 @@ function addStoneTo3DScene(x, z, player) {
         scene.add(piece);
         stoneModels[key] = piece;
 
-        // Animation for fallback
         let currentY = piece.position.y;
         const targetY = stoneHeight / 2;
         const dropSpeed = 0.2;
@@ -322,16 +301,10 @@ function addStoneTo3DScene(x, z, player) {
 }
 
 function removeStoneFrom3DScene(x, z) {
-    const key = `${col}-${row}`; // Using col, row as per board array
+    // FIX: Using the correct arguments 'x' and 'z' to create the key.
+    const key = `${x}-${z}`;
     if (stoneModels[key]) {
         scene.remove(stoneModels[key]);
-        // Dispose of geometry and material if necessary, for larger scenes
-        // stoneModels[key].traverse(child => {
-        //     if (child.isMesh) {
-        //         child.geometry.dispose();
-        //         child.material.dispose();
-        //     }
-        // });
         delete stoneModels[key];
     }
 }
@@ -349,9 +322,6 @@ function onBoardClick(event) {
 
     if (intersects.length > 0) {
         const point = intersects[0].point;
-        // The boardMesh center is at ((BOARD_SIZE-1)/2, -thickness/2, (BOARD_SIZE-1)/2)
-        // The top surface of the boardMesh is at y=0.
-        // We need to map the click point (which is on the top surface) to grid coordinates.
         const col = Math.round(point.x); 
         const row = Math.round(point.z); 
         
@@ -376,7 +346,7 @@ function onWindowResize() {
 }
 
 // =================================================================
-// Go Game Logic (No changes needed here, using col, row from board array consistently)
+// Go Game Logic (No changes needed here)
 // =================================================================
 function initializeBoardArray() { board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0));}
 function placeStone(row, col, player) {
@@ -460,7 +430,7 @@ function getAIMove() {
 }
 
 // =================================================================
-// Game Flow & UI (Mostly unchanged, ensuring correct piece variable usage)
+// Game Flow & UI
 // =================================================================
 function resetGame() {
     if (unsubscribeGameListener) unsubscribeGameListener();
@@ -529,7 +499,7 @@ function updateTurnText() {
 }
 
 // =================================================================
-// Multiplayer (Firebase) (Ensuring correct piece variable usage)
+// Multiplayer (Firebase)
 // =================================================================
 async function createMultiplayerGame() {
     if (!auth.currentUser) return;

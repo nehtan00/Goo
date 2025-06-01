@@ -60,8 +60,8 @@ header {
 
 /* ** STYLE FOR YOUR CUSTOM LOGO IMAGE ** */
 .custom-logo-img { 
-    width: 50px;  /* Adjust width as needed */
-    height: 50px; /* Adjust height as needed, or use 'auto' for one dimension */
+    width: 15px;  /* Adjust width as needed */
+    height: 15px; /* Adjust height as needed, or use 'auto' for one dimension */
     object-fit: contain; /* Ensures image fits without distortion */
     border-radius: 4px; /* Optional: slightly rounded corners for the logo */
 }

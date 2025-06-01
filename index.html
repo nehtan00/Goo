@@ -9,12 +9,12 @@
     <!-- Prevent 404 for favicon -->
     <link rel="icon" href="data:,">
 
-    <!-- IMPORT MAP: Tells browser how to resolve module names -->
+    <!-- IMPORT MAP: Tells browser how to resolve module names for ES6 imports -->
     <script type="importmap">
     {
         "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
+            "three": "https://cdn.skypack.dev/three@0.128.0/build/three.module.js",
+            "three/addons/": "https://cdn.skypack.dev/three@0.128.0/examples/jsm/"
         }
     }
     </script>
@@ -117,7 +117,7 @@
         <div class="modal-content modal-large">
             <button class="close-button" data-modal-id="rules-strategy-modal">&times;</button>
             <h2>Go: Basic Rules & Strategy</h2>
-            <!-- Rules and Strategy Content (unchanged) -->
+            <!-- Rules and Strategy Content -->
             <div class="rules-section">
                 <h3>Basic Rules of Go</h3>
                 <p><strong>Objective:</strong> The main goal in Go is to surround more empty territory on the board than your opponent. You also score points for stones you capture.</p>

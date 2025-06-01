@@ -1,15 +1,20 @@
 /* =================================================================
-// Mythos Go - style.css (Stone Relief Carving Effect)
+// Mythos Go - style.css (Dribbble Button Style Update)
 // ================================================================= */
 
 /* --- Global Styles & Font --- */
 :root {
-    --primary-font: 'Cinzel', serif;
-    --text-color: #2c3e50; /* Darker, slightly desaturated blue/grey for text */
-    /* For the "marble wall" background - REPLACE with your texture path */
-    --marble-wall-texture: url('assets/wall.jpg'); 
-    --page-background-fallback: #e8e8e8; /* Fallback if texture fails */
-    --border-color: #000000;
+    --primary-font: 'Cinzel', serif; /* Keeping this for headings for theme consistency */
+    --button-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Cleaner sans-serif for buttons */
+    --text-color: #2c3e50; 
+    --marble-wall-texture: url('assets/light_marble_wall_texture.jpg'); 
+    --page-background-fallback: #f0f0f0; /* Use the body background for consistency */
+    --border-color: #000000; /* Kept for general borders if any, buttons will override */
+
+    /* Dribbble Button Colors */
+    --button-blue-light: #52A9FF; /* Light blue for gradient top */
+    --button-blue-dark: #3A8DFF;  /* Darker blue for gradient bottom */
+    --button-shadow-color: rgba(50, 100, 200, 0.25); /* Softer blueish shadow */
 }
 
 html, body {
@@ -19,11 +24,11 @@ html, body {
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Cleaner sans-serif */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
     background-image: var(--marble-wall-texture);
-    background-color: var(--page-background-fallback); /* Fallback */
-    background-size: cover; /* Cover the entire page */
-    background-attachment: fixed; /* Keep background fixed during scroll */
+    background-color: var(--page-background-fallback); 
+    background-size: cover; 
+    background-attachment: fixed; 
     background-position: center center;
     color: var(--text-color);
     display: flex;
@@ -34,9 +39,9 @@ body {
 
 /* --- Header --- */
 header {
-    background-color: rgba(255, 255, 255, 0.85); /* Slightly transparent white for a softer look on marble */
+    background-color: rgba(255, 255, 255, 0.85); 
     padding: 15px 30px;
-    border-bottom: 1px solid rgba(0,0,0,0.2); /* Softer border */
+    border-bottom: 1px solid rgba(0,0,0,0.1); 
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     display: flex;
     justify-content: space-between;
@@ -53,15 +58,15 @@ header {
     gap: 15px;
 }
 
-.logo-fish { /* Assuming this class is for your custom logo image now */
-    width: 45px;  /* Adjust as needed */
-    height: 45px; /* Adjust as needed */
+.logo-fish { 
+    width: 45px; 
+    height: 45px; 
     object-fit: contain;
 }
 
 header h1 {
     font-family: var(--primary-font);
-    font-size: 1.7em; /* Slightly adjusted */
+    font-size: 1.7em; 
     font-weight: 700;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -69,24 +74,10 @@ header h1 {
     color: #333;
 }
 
-header nav button {
-    background-color: transparent;
-    border: 1px solid #777;
-    color: #555;
-    padding: 8px 18px;
-    border-radius: 20px; /* Pill-shaped buttons */
-}
-header nav button:hover {
-    background-color: #333;
-    color: #fff;
-    border-color: #333;
-}
-
-
 /* --- Main Content & Game Area --- */
 main {
     flex-grow: 1;
-    padding: 25px; /* Increased padding */
+    padding: 25px; 
     display: flex;
     flex-direction: column;
     align-items: center; 
@@ -98,23 +89,19 @@ main {
 #game-container {
     width: 90vw;
     height: 90vw; 
-    max-width: 580px; /* Max size for the container */
+    max-width: 580px; 
     max-height: 580px;
     margin: 25px auto; 
-    border-radius: 12px; /* Softer rounding */
-    
-    /* **STONE RELIEF CARVING EFFECT** */
-    background-color: rgba(0,0,0,0.05); /* Darker, slightly transparent base for the "carved out" area */
-    /* Multiple inset shadows for chiseled look - light from top-left assumed */
+    border-radius: 12px; 
+    background-color: rgba(0,0,0,0.05); 
     box-shadow: 
-        inset 3px 3px 6px rgba(0,0,0,0.4),     /* Darker shadow for top/left inner edges */
-        inset -2px -2px 5px rgba(255,255,255,0.25), /* Lighter highlight for bottom/right inner edges */
-        2px 2px 5px rgba(0,0,0,0.1); /* Very subtle outer shadow to lift the whole "page" if needed, optional */
-
+        inset 3px 3px 6px rgba(0,0,0,0.4),     
+        inset -2px -2px 5px rgba(255,255,255,0.25), 
+        2px 2px 5px rgba(0,0,0,0.1); 
     cursor: pointer;
     overflow: hidden; 
-    border: 1px solid rgba(0,0,0,0.1); /* Very subtle border, almost invisible */
-    padding: 8px; /* Padding inside the carving before the 3D board starts */
+    border: 1px solid rgba(0,0,0,0.1); 
+    padding: 8px; 
     box-sizing: border-box;
 }
 
@@ -123,7 +110,7 @@ main {
     margin-top: 20px;
     width: 100%;
     max-width: 580px; 
-    background-color: rgba(255,255,255,0.6); /* Semi-transparent background for info panel */
+    background-color: rgba(255,255,255,0.6); 
     padding: 10px;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -153,22 +140,83 @@ main {
     color: #555;
 }
 
-/* --- Action Buttons --- */
-#action-buttons button {
-    font-size: 0.9rem;
-    padding: 10px 22px;
+/* --- NEW BUTTON STYLES (Inspired by Dribbble Shot) --- */
+button,
+header nav button, 
+#action-buttons button, 
+.modal-content button,
+.share-input-group button {
+    font-family: var(--button-font);
+    font-weight: 600; /* Semi-bold */
+    font-size: 0.9rem; /* Adjust as needed */
+    text-transform: none; /* Dribbble button is not uppercase */
+    background-image: linear-gradient(to bottom, var(--button-blue-light), var(--button-blue-dark));
+    border: none; 
+    color: white;
+    padding: 12px 28px; /* Adjust padding for proportions */
+    margin: 8px; /* Consistent margin */
+    cursor: pointer;
     border-radius: 25px; /* Pill shape */
-    border-width: 2px;
-    margin: 8px;
+    box-shadow: 0 4px 12px var(--button-shadow-color), 0 1px 3px rgba(0,0,0,0.1); /* Softer, more diffused shadow */
+    transition: all 0.2s ease-out;
+    outline: none;
+    letter-spacing: 0.5px;
+    display: inline-block; /* Ensure buttons behave well in flex containers */
+    text-align: center;
+    width: auto; /* Allow buttons to size to content, unless specified otherwise */
 }
+
+button:hover,
+header nav button:hover, 
+#action-buttons button:hover, 
+.modal-content button:hover,
+.share-input-group button:hover {
+    background-image: linear-gradient(to bottom, 
+        hsl(from var(--button-blue-light) h s calc(l - 5%)), /* Slightly darker top */
+        hsl(from var(--button-blue-dark) h s calc(l - 5%))  /* Slightly darker bottom */
+    );
+    box-shadow: 0 6px 15px var(--button-shadow-color), 0 2px 4px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+button:active,
+header nav button:active, 
+#action-buttons button:active, 
+.modal-content button:active,
+.share-input-group button:active {
+    background-image: linear-gradient(to bottom, 
+        hsl(from var(--button-blue-light) h s calc(l - 10%)), /* Even darker top */
+        hsl(from var(--button-blue-dark) h s calc(l - 10%))  /* Even darker bottom */
+    );
+    box-shadow: 0 2px 8px var(--button-shadow-color), 0 1px 2px rgba(0,0,0,0.1);
+    transform: translateY(0px);
+}
+
+/* Specific button overrides if needed */
+header nav button {
+    padding: 10px 22px; /* Slightly smaller for header */
+    font-size: 0.85rem;
+}
+
+/* Ensure modal action buttons take full width if desired */
+.modal-content > button { /* Direct children buttons in modal-content */
+    width: 100%; 
+    box-sizing: border-box;
+}
+/* Buttons inside share-input-group should keep auto width */
+.share-input-group button {
+    width: auto;
+    flex-shrink: 0; /* Prevent shrinking in flex container */
+}
+
 
 /* --- Footer --- */
 footer {
-    background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent footer */
+    background-color: rgba(255, 255, 255, 0.7); 
     color: #555;
     text-align: center;
     padding: 15px;
-    border-top: 1px solid rgba(0,0,0,0.1); /* Softer border */
+    border-top: 1px solid rgba(0,0,0,0.1); 
     font-size: 0.8em;
     letter-spacing: 0.5px;
     flex-shrink: 0; 
@@ -182,7 +230,7 @@ footer {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7); /* Darker overlay */
+    background-color: rgba(0, 0, 0, 0.7); 
     display: flex; 
     align-items: center;
     justify-content: center;
@@ -199,17 +247,17 @@ footer {
 }
 
 .modal-content {
-    background-color: #fdfdfd; /* Slightly off-white modal background */
+    background-color: #fdfdfd; 
     padding: 30px;
-    border: 1px solid #ccc; /* Softer border for modals */
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); /* More pronounced shadow for modals */
+    border: 1px solid #ccc; 
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); 
     width: 100%;
     max-width: 500px;
     position: relative;
     text-align: left;
     max-height: 90vh; 
     overflow-y: auto; 
-    border-radius: 10px; /* Rounded modal corners */
+    border-radius: 10px; 
 }
 
 .modal-content.modal-large {
@@ -228,29 +276,32 @@ footer {
     padding-bottom: 10px;
 }
 
-.close-button { /* Style remains largely the same, effective */
+.close-button { /* The "x" close button */
     position: absolute;
     top: 10px;
     right: 15px;
     font-size: 2.5rem;
     font-weight: bold;
     color: #aaa;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
+    background: none !important; /* Override gradient */
+    border: none !important; /* Override border */
+    box-shadow: none !important; /* Override shadow */
+    padding: 0 !important;
     line-height: 1;
+    cursor: pointer;
+    transform: none !important; /* Override transform */
 }
 .close-button:hover {
-    color: var(--border-color);
-    background: none;
-    transform: none; 
-    box-shadow: none;
+    color: var(--border-color) !important;
+    background: none !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
+
 
 /* --- Form Elements within Modals --- */
 .setup-section, .rules-section, .strategy-section {
-    border-top: 1px solid #eee; /* Lighter separator */
+    border-top: 1px solid #eee; 
     padding-top: 20px;
     margin-top: 20px;
 }
@@ -271,7 +322,7 @@ footer {
     box-sizing: border-box; 
     padding: 10px;
     margin-bottom: 15px;
-    border: 1px solid #ddd; /* Lighter input border */
+    border: 1px solid #ddd; 
     border-radius: 4px;
     font-size: 1rem;
 }
@@ -291,35 +342,6 @@ footer {
     border-radius: 4px;
 }
 
-.modal-content button { /* Primary action buttons in modals */
-    display: block;
-    width: 100%;
-    margin-top: 15px;
-    padding: 12px 20px;
-    background-color: #333;
-    color: #fff;
-    border-color: #333;
-}
-.modal-content button:hover {
-    background-color: #555;
-    border-color: #555;
-}
-
-
-.share-input-group { /* Style remains effective */
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-.share-input-group input {
-    flex-grow: 1;
-    margin-bottom: 0;
-}
-.share-input-group button {
-    width: auto;
-    margin-top: 0;
-    flex-shrink: 0;
-}
 
 /* --- Rules/Strategy Modal Specific Styles --- */
 #rules-strategy-modal h3 {
@@ -352,7 +374,7 @@ footer {
 }
 
 /* --- Responsive Design --- */
-@media (max-width: 768px) { /* Broader breakpoint for adjustments */
+@media (max-width: 768px) { 
     header h1 {
         font-size: 1.4em;
     }

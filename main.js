@@ -1,5 +1,5 @@
 // =================================================================
-// Mythos Go - main.js (AI Difficulty & Simulation Fix)
+// Mythos Go - main.js (Ensuring getNeighbors is Defined)
 // =================================================================
 
 // --- Constants ---
@@ -69,7 +69,7 @@ function assignDOMElements() {
     rulesStrategyModal = document.getElementById('rules-strategy-modal');
     playerColorInput = document.getElementById('player-color-input');
     playerPieceSelect = document.getElementById('player-piece-select');
-    difficultySelect = document.getElementById('difficulty-select'); // Make sure this ID is correct
+    difficultySelect = document.getElementById('difficulty-select'); 
     startAiGameButton = document.getElementById('start-ai-game-button');
     createMultGameButton = document.getElementById('create-mult-game-button');
     joinGameCodeInput = document.getElementById('join-game-code-input');
@@ -240,21 +240,58 @@ function onWindowResize() {
 // =================================================================
 function initializeBoardArray() { board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0)); }
 
-// **REFACTOR:** placeStone now takes a boardState and returns the new state if valid.
-// It no longer modifies the global `board` variable directly.
+// This is the primary function for making a move on the *actual game board*.
+// It calls simulatePlaceStone to check validity and get results.
+function makeActualMove(row, col, player) {
+    const simulationResult = simulatePlaceStone(row, col, player, board); // Simulate on current global board
+
+    if (simulationResult === null) {
+        return null; // Move was illegal according to simulation
+    }
+
+    // Move is legal, apply changes to the global board
+    board = simulationResult.newBoard; 
+    
+    // Update Ko state based on the board *before* this successful move, if captures occurred
+    if (simulationResult.captures.length > 0) {
+        // Create a representation of the board *before* this move (excluding the placed stone)
+        // This can be simplified to just using the state of `board` before it was updated by `simulationResult.newBoard`
+        // However, for Ko, we need the state *just before the capture*.
+        // A robust Ko might require a history, but for this, we'll use a simplified approach.
+        // We can store the string of `board` before `board = simulationResult.newBoard;`
+        // if `simulationResult.captures.length > 0`. For now, let `simulatePlaceStone` handle simple Ko.
+        
+        // If simulatePlaceStone handled Ko and it was valid, we can assume koState is managed there or is null.
+        // The koState used by simulatePlaceStone is the global one.
+        // If this move *created* a Ko situation for the *next* turn, we'd set global koState here.
+        // Let's assume simulatePlaceStone's Ko check is sufficient for AI.
+        // For actual moves, the `koState` will be updated based on the global board before this move *if* a capture occurred.
+        let boardStateBeforeThisMoveString = board.map(r => r.slice()); // Get current state (already updated from simulation)
+        boardStateBeforeThisMoveString[row][col] = 0; // Temporarily remove the stone just placed
+        simulationResult.captures.forEach(s => boardStateBeforeThisMoveString[s.row][s.col] = player === 1 ? 2 : 1); // Put back captured stones of opponent
+        koState = boardStateBeforeThisMoveString.map(r=>r.join('')).join('');
+
+    } else {
+        koState = null;
+    }
+
+    return simulationResult.captures; // Return only the captured stones from this move
+}
+
+
 function simulatePlaceStone(row, col, player, boardToSimulateOn) {
     if (boardToSimulateOn[row][col] !== 0) return null; 
 
-    let tempBoard = boardToSimulateOn.map(r => r.slice()); // Operate on a copy of the passed-in board
+    let tempBoard = boardToSimulateOn.map(r => r.slice()); 
     tempBoard[row][col] = player;
     
     const opponent = player === 1 ? 2 : 1;
     let capturedStonesThisMove = [];
 
-    const neighbors = getNeighbors(row, col);
+    const neighbors = getNeighbors(row, col); // THIS FUNCTION MUST EXIST
     for (const n of neighbors) {
         if (tempBoard[n.row][n.col] === opponent) {
-            const group = findGroup(n.row, n.col, tempBoard); // findGroup uses the board it's given
+            const group = findGroup(n.row, n.col, tempBoard); 
             if (group.liberties === 0) {
                 capturedStonesThisMove.push(...group.stones);
             }
@@ -265,25 +302,57 @@ function simulatePlaceStone(row, col, player, boardToSimulateOn) {
 
     const ownGroup = findGroup(row, col, tempBoard);
     if (ownGroup.liberties === 0) {
-        return null; // Invalid move: suicide
+        return null; 
     }
     
-    // Ko check is tricky with simulated boards; for AI, we might simplify or ignore full Ko chains.
-    // A simple Ko check might compare the new tempBoard string with the *global* koState.
     const boardString = tempBoard.map(r => r.join('')).join('');
-    if (boardString === koState && capturedStonesThisMove.length === 1 && capturedStonesThisMove[0].row === row && capturedStonesThisMove[0].col === col) {
-        // This is a simplified Ko check: if the resulting board state is identical to the koState
-        // AND the move was a single stone capture at the same point, it's likely a Ko.
-        // A more robust Ko might require checking against a history of board states.
-        // For this AI's purpose, this simplification is acceptable.
-        // return null; // Uncomment to enable basic Ko prevention for AI simulation.
+    // Compare with global koState (state of the *actual* board before the *previous* move that resulted in a single capture)
+    if (koState !== null && boardString === koState) { 
+        // This check is a simplification. True Ko involves a single stone capture repeating.
+        // If the AI move would revert to the exact board state that was previously identified as a Ko-inducing state
+        // by the opponent's single-stone capture, then it's a Ko.
+        return null; 
     }
-    
+        
     return { newBoard: tempBoard, captures: capturedStonesThisMove };
 }
 
+function findGroup(startRow, startCol, boardState) {
+    const player = boardState[startRow][startCol];
+    if (player === 0) return { stones: [], liberties: 0 };
+    const queue = [{ row: startRow, col: startCol }];
+    const visited = new Set([`${startRow},${startCol}`]);
+    const groupStones = [];
+    const libertyPoints = new Set();
+    while (queue.length > 0) {
+        const { row, col } = queue.shift();
+        groupStones.push({ row, col });
+        const neighbors = getNeighbors(row, col);
+        for (const n of neighbors) {
+            const key = `${n.row},${n.col}`;
+            if (visited.has(key)) continue;
+            const neighborState = boardState[n.row][n.col];
+            if (neighborState === 0) libertyPoints.add(key);
+            else if (neighborState === player) {
+                visited.add(key);
+                queue.push({ row: n.row, col: n.col });
+            }
+        }
+    }
+    return { stones: groupStones, liberties: libertyPoints.size };
+}
+// **ENSURE THIS FUNCTION IS DEFINED IN THE GLOBAL SCOPE or accessible scope**
+function getNeighbors(row, col) {
+    const neighbors = [];
+    if (row > 0) neighbors.push({ row: row - 1, col: col });
+    if (row < BOARD_SIZE - 1) neighbors.push({ row: row + 1, col: col });
+    if (col > 0) neighbors.push({ row: row, col: col - 1 });
+    if (col < BOARD_SIZE - 1) neighbors.push({ row: row, col: col + 1 });
+    return neighbors;
+}
+
 // =================================================================
-// AI Logic (Uses refactored placeStone for simulation)
+// AI Logic
 // =================================================================
 function getAIMove() { 
     let bestScore = -Infinity; let bestMoves = []; const availableMoves = [];
@@ -292,40 +361,34 @@ function getAIMove() {
 
     for (const move of availableMoves) {
         let score = 0;
-        
-        // **AI SIM FIX:** Use simulatePlaceStone with a copy of the current *global* board
         const simulationResult = simulatePlaceStone(move.r, move.c, 2, board.map(r => r.slice())); 
         
-        if (simulationResult === null) continue; // Skip illegal simulated moves
+        if (simulationResult === null) continue; 
         
         const { newBoard: simBoard, captures: simCaptures } = simulationResult;
 
         score += simCaptures.length * 100;
         
-        // All further checks should use `simBoard`
-        const neighbors = getNeighbors(move.r, move.c); // Neighbors of the move point
+        const neighbors = getNeighbors(move.r, move.c);
         for (const n of neighbors) { 
-            if (simBoard[n.row][n.col] === 1) { // Opponent piece on the simulated board
+            if (simBoard[n.row][n.col] === 1) { 
                 const group = findGroup(n.row, n.col, simBoard); 
-                if (group.liberties === 1) { // If this AI move puts them in atari
+                if (group.liberties === 1) { 
                     score += 25;
-                } else if (group.liberties === 2 && simCaptures.length === 0) { // Threaten atari
+                } else if (group.liberties === 2 && simCaptures.length === 0) { 
                     score += 10;
                 }
             }
         }
         // Check if the move saves an AI group from atari
         const aiOwnGroupAfterMove = findGroup(move.r, move.c, simBoard);
-        if (aiOwnGroupAfterMove.liberties === 1 && simCaptures.length > 0) { // If it was nearly captured but this move saved it
-             // This case is complex, generally covered by captures having high score.
-        } else if (aiOwnGroupAfterMove.liberties > 1) {
-            // Check adjacent friendly groups on the *original* board to see if they were in atari
+        if (aiOwnGroupAfterMove.liberties > 1) {
             for(const n of neighbors) {
-                if(board[n.row][n.col] === 2) { // AI stone on original board
+                if(board[n.row][n.col] === 2) { 
                     const originalGroup = findGroup(n.row, n.col, board);
-                    if(originalGroup.liberties === 1) { // Was in atari
-                         const newFormedGroup = findGroup(n.row, n.col, simBoard); // Check its state on new board
-                         if(newFormedGroup.liberties > 1) score += 50; // Saved a group
+                    if(originalGroup.liberties === 1) { 
+                         const newFormedGroup = findGroup(n.row, n.col, simBoard); 
+                         if(newFormedGroup.liberties > 1) score += 50; 
                     }
                 }
             }
@@ -340,7 +403,7 @@ function getAIMove() {
         if (score > bestScore) { bestScore = score; bestMoves = [move]; } 
         else if (score === bestScore) bestMoves.push(move);
     }
-    
+        
     if (bestMoves.length > 0) return bestMoves[Math.floor(Math.random() * bestMoves.length)];
     else return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : {pass: true};
 }
@@ -359,7 +422,7 @@ function resetGame() {
 }
 function startNewAIGame() {
     resetGame(); gameMode = 'ai'; 
-    currentDifficulty = difficultySelect.value; // **ENSURE difficulty is set from select**
+    currentDifficulty = difficultySelect.value; 
     gameOver = false;
     player1Settings.color = playerColorInput.value;
     player1Settings.piece = playerPieceSelect.value; 
@@ -369,29 +432,11 @@ function startNewAIGame() {
     passTurnButton.classList.remove('hidden'); closeModal(gameSetupModal);
 }
 
-// **REFACTOR:** handlePlayerMove now uses the global `board` for actual moves.
-function handlePlayerMove(row, col) {
-    // Try to place stone on the *actual current game board*
-    const simulationResult = simulatePlaceStone(row, col, currentPlayer, board);
+function handlePlayerMove(row, col) { 
+    const capturedStones = makeActualMove(row, col, currentPlayer); // Use makeActualMove
 
-    if (simulationResult !== null) { 
+    if (capturedStones !== null) { 
         consecutivePasses = 0;
-        
-        // Apply the successful move to the global board
-        board = simulationResult.newBoard; 
-        const capturedStones = simulationResult.captures;
-
-        // Update Ko state based on the *actual* board before this move, if captures occurred
-        if (capturedStones.length > 0) {
-            // Store the board state *before* this successful move if it led to captures
-            // For simplicity, we'll use the string of the board *before* this move's changes (excluding the placed stone)
-            let boardBeforeThisMove = board.map(r => r.slice());
-            boardBeforeThisMove[row][col] = 0; // Temporarily remove the stone just placed to get pre-move state for Ko
-            koState = boardBeforeThisMove.map(r=>r.join('')).join('');
-        } else {
-            koState = null;
-        }
-
         addStoneTo3DScene(col, row, currentPlayer);
         
         if (capturedStones.length > 0) {
@@ -482,11 +527,11 @@ function listenToGameUpdates(gameId) {
             if (!doc.exists) { updateStatusText("Game deleted."); resetGame(); return; }
             const gameData = doc.data();
             if (!renderer && !gameOver) initThreeJS();
-            // Check if it's our turn to update local board, or if board changed
+            
             if (gameMode === 'multiplayer' && localPlayerNum !== gameData.currentPlayer) {
-                 board = gameData.board; // Update board if it's not our turn (opponent moved)
+                 board = gameData.board; 
             } else if (JSON.stringify(board) !== JSON.stringify(gameData.board)) {
-                board = gameData.board; // Or if board state from Firebase is different
+                board = gameData.board; 
             }
 
             captures = gameData.captures; 

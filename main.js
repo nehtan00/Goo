@@ -243,7 +243,7 @@ function createFloatingGridBoard() { /* ... PBR texture loading from previous ve
 function drawBoardGridLines() {
     const lineThickness = 0.035; 
     const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.85, metalness: .9 }); 
-    const lineY = 0.01; 
+    const lineY = 0.05; 
     const gridLinesGroup = new THREE.Group();
     gridLinesGroup.position.y = lineY; 
     
@@ -273,7 +273,7 @@ function addStoneTo3DScene(x, z, player) {
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
     const pieceTargetHeight = 1.3; // **Desired final height of the piece on the board**
-    const pieceYOnBoard = 0.3;    // Y for piece BASE, clearly on top of grid lines
+    const pieceYOnBoard = 0.8;    // Y for piece BASE, clearly on top of grid lines
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {

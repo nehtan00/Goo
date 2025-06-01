@@ -183,7 +183,7 @@ function initThreeJS() {
     dirLight.shadow.mapSize.height = 2048; 
 
     // ** NEW: Shadow Camera properties for dirLight to expand "beam" **
-    const shadowCamSize = BOARD_SIZE * 1.5; // Adjust this multiplier to change beam size (e.g., 1.5, 2.0, 2.5)
+    const shadowCamSize = BOARD_SIZE * 3.5; // Adjust this multiplier to change beam size (e.g., 1.5, 2.0, 2.5)
     dirLight.shadow.camera.near = 0.5;    
     dirLight.shadow.camera.far = 50;      
     dirLight.shadow.camera.left = -shadowCamSize / 2;
@@ -335,8 +335,8 @@ function addStoneTo3DScene(x, z, player) {
     }, undefined, error => { /* ... fallback code unchanged ... */ 
         console.error(`Model load error for ${modelPath}:`, error);
         const pieceBaseScaleMultiplier = 1.65; // Match the target for GLB
-        const stoneRadius = 0.3 * (TARGET_PIECE_HEIGHT / 0.15); // Approximate based on target height
-        const stoneHeight = 0.1 * (TARGET_PIECE_HEIGHT / 0.15);
+        const stoneRadius = 0.3 * (TARGET_PIECE_HEIGHT / 0.25); // Approximate based on target height
+        const stoneHeight = 0.1 * (TARGET_PIECE_HEIGHT / 0.45);
         const geom = new THREE.CylinderGeometry(stoneRadius, stoneRadius, stoneHeight, 24);
         const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(settings.color), roughness: 0.5, metalness: 0.1 });
         const piece = new THREE.Mesh(geom, mat); piece.castShadow = true; 

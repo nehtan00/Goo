@@ -1,23 +1,15 @@
 // =================================================================
-// Mythos Go - main.js (Diagnostic Logging)
+// Mythos Go - main.js (Aggressive Logging & Module Import Fix)
 // =================================================================
-console.log("main.js: Script execution started (top of file).");
+console.log("main.js: SCRIPT EXECUTION STARTED (TOP OF FILE). If you see this, the browser is reading the file.");
 
 // --- ES6 Module Imports ---
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-// Attempt to import RoundedBoxGeometry
-let RoundedBoxGeometryInstance;
-try {
-    // This path relies on your import map in index.html for 'three/addons/'
-    const RBoxModule = await import('three/addons/geometries/RoundedBoxGeometry.js');
-    RoundedBoxGeometryInstance = RBoxModule.RoundedBoxGeometry;
-    console.log("main.js: RoundedBoxGeometry imported successfully via module.");
-} catch (e) {
-    console.warn("main.js: Could not import RoundedBoxGeometry as a module. Will try THREE.RoundedBoxGeometry or fallback.", e);
-    // Fallback will be checked in createFloatingGridBoard
-}
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'; // Direct import
+
+console.log("main.js: THREE.js core and addons imported.");
 
 
 // --- Constants ---
@@ -64,22 +56,22 @@ console.log("main.js: Global variables declared.");
 // Initial Setup: DOMContentLoaded ensures HTML is ready
 // =================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("main.js: DOMContentLoaded event fired.");
+    console.log("main.js: DOMContentLoaded event FIRED.");
     try {
         assignDOMElements(); 
         initEventListeners(); 
         waitForAuthAndSetupUI();
         window.addEventListener('resize', onWindowResize, false);
-        console.log("main.js: Initial setup within DOMContentLoaded completed.");
+        console.log("main.js: Initial setup within DOMContentLoaded COMPLETED.");
     } catch (error) {
-        console.error("main.js: Error during initial setup inside DOMContentLoaded:", error);
+        console.error("main.js: ERROR during initial setup inside DOMContentLoaded:", error);
         if (statusText) statusText.textContent = "Error initializing game. Please check console.";
-        else console.error("main.js: statusText element not found when trying to report DOMContentLoaded error.");
+        else console.error("main.js: statusText element NOT FOUND when trying to report DOMContentLoaded error.");
     }
 });
 
 function assignDOMElements() {
-    console.log("main.js: assignDOMElements() called.");
+    console.log("main.js: assignDOMElements() CALLED.");
     gameContainer = document.getElementById('game-container');
     statusText = document.getElementById('status-text');
     turnText = document.getElementById('turn-text');
@@ -102,12 +94,14 @@ function assignDOMElements() {
     joinMultGameButton = document.getElementById('join-mult-game-button');
     
     if (!newGameButton) console.error("main.js: newGameButton NOT FOUND in assignDOMElements!");
+    else console.log("main.js: newGameButton FOUND.");
     if (!gameContainer) console.error("main.js: gameContainer NOT FOUND in assignDOMElements!");
-    console.log("main.js: assignDOMElements() finished.");
+    else console.log("main.js: gameContainer FOUND.");
+    console.log("main.js: assignDOMElements() FINISHED.");
 }
 
 function initEventListeners() {
-    console.log("main.js: initEventListeners() called.");
+    console.log("main.js: initEventListeners() CALLED.");
     if (newGameButton) newGameButton.addEventListener('click', () => openModal(gameSetupModal)); else console.error("New Game button not found for listener.");
     if (joinGameButton) joinGameButton.addEventListener('click', () => openModal(joinGameModal)); else console.error("Join Game button not found for listener.");
     if (rulesStrategyButton) rulesStrategyButton.addEventListener('click', () => openModal(rulesStrategyModal)); else console.error("Rules button not found for listener.");
@@ -139,11 +133,13 @@ function initEventListeners() {
     const copyLinkBtn = document.getElementById('copy-link-button');
     if(copyCodeBtn) copyCodeBtn.addEventListener('click', () => copyToClipboard(document.getElementById('share-game-code-display').value));
     if(copyLinkBtn) copyLinkBtn.addEventListener('click', () => copyToClipboard(document.getElementById('share-game-link-display').value));
-    console.log("main.js: initEventListeners() finished.");
+    console.log("main.js: initEventListeners() FINISHED.");
 }
 
 function waitForAuthAndSetupUI() {
-    console.log("main.js: waitForAuthAndSetupUI() called.");
+    console.log("main.js: waitForAuthAndSetupUI() CALLED.");
+    // Firebase 'auth' and 'db' should be globally available from firebase.js
+    // Ensure firebase.js has loaded and initialized 'auth' before this script (module) runs.
     if (typeof auth !== 'undefined' && auth) { 
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -151,12 +147,13 @@ function waitForAuthAndSetupUI() {
                 checkUrlForGameToJoin();
                 console.log("main.js: User authenticated, UID:", user.uid);
             } else {
-                 console.log("main.js: User is signed out or anonymous sign-in pending/failed in onAuthStateChanged.");
+                 // This might be called initially before anonymous sign-in completes.
+                 console.log("main.js: User is signed out or anonymous sign-in pending in onAuthStateChanged.");
             }
         });
     } else {
-        console.error("main.js: Firebase Auth object (auth) not available globally. Check firebase.js loading and initialization.");
-        if(statusText) statusText.textContent = "Error: Cannot connect to Authentication services.";
+        console.error("main.js: Firebase Auth object (auth) not available globally. Check firebase.js loading order and initialization.");
+        if(statusText) statusText.textContent = "Error: Auth services unavailable.";
     }
 }
 
@@ -175,9 +172,9 @@ function checkUrlForGameToJoin() {
 // 3D Scene
 // =================================================================
 function initThreeJS() {
-    console.log("main.js: initThreeJS() called.");
-    if (!gameContainer) { console.error("main.js: gameContainer not found. Cannot initialize Three.js scene."); return; }
-    // ... (rest of initThreeJS unchanged) ...
+    console.log("main.js: initThreeJS() CALLED.");
+    if (!gameContainer) { console.error("main.js: gameContainer not found for Three.js."); return; }
+    // ... (rest of initThreeJS as previously provided) ...
     gameContainer.innerHTML = ''; stoneModels = {};
     scene = new THREE.Scene(); scene.background = new THREE.Color(0xdddddd); 
     camera = new THREE.PerspectiveCamera(45, gameContainer.clientWidth / gameContainer.clientHeight, 0.1, 1000);
@@ -210,15 +207,12 @@ function createFloatingGridBoard() {
     const boardSegments = 6; 
 
     let boardGeom;
-    if (RoundedBoxGeometryInstance) { 
-        boardGeom = new RoundedBoxGeometryInstance(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
-        console.log("main.js: Using imported RoundedBoxGeometryInstance.");
-    } else if (typeof THREE.RoundedBoxGeometry === 'function') { 
-         boardGeom = new THREE.RoundedBoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
-         console.log("main.js: Using global THREE.RoundedBoxGeometry.");
-    }
-    else {
-        console.warn("main.js: RoundedBoxGeometry not available, using BoxGeometry.");
+    // Use the directly imported RoundedBoxGeometry from the top of the file
+    if (RoundedBoxGeometry) { 
+        boardGeom = new RoundedBoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
+        console.log("main.js: Using imported RoundedBoxGeometry for board.");
+    } else {
+        console.warn("main.js: RoundedBoxGeometry was not imported successfully, using BoxGeometry for board.");
         boardGeom = new THREE.BoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE);
     }
     
@@ -238,7 +232,7 @@ function createFloatingGridBoard() {
 }
 
 function drawBoardGridLines(boardCurrentThickness) {
-    // ... (drawBoardGridLines unchanged) ...
+    // ... (drawBoardGridLines as previously provided) ...
     const lineThickness = 0.04; 
     const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0 }); 
     const lineY = 0.015; 
@@ -261,7 +255,7 @@ function drawBoardGridLines(boardCurrentThickness) {
 
 
 function addStoneTo3DScene(x, z, player) { 
-    // ... (addStoneTo3DScene unchanged from version with console.log for piece scaling) ...
+    // ... (addStoneTo3DScene unchanged from "Further Piece Scaling & Positioning" version) ...
     const key = `${x}-${z}`; if (stoneModels[key]) return;
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
@@ -288,7 +282,7 @@ function addStoneTo3DScene(x, z, player) {
         const animationStartY = pieceYOnBoard + 2.0; 
         model.position.set(x, animationStartY, z); 
 
-        console.log(`Piece: ${settings.piece} at grid(${x},${z}). Model Height After Scale: ${(newBox.max.y - newBox.min.y).toFixed(3)}. Final Scale: ${model.scale.x.toFixed(2)}. Anim Start Y: ${model.position.y.toFixed(2)}, TargetY: ${pieceYOnBoard}`);
+        // console.log(`Piece: ${settings.piece} at grid(${x},${z}). Model Height After Scale: ${(newBox.max.y - newBox.min.y).toFixed(3)}. Final Scale: ${model.scale.x.toFixed(2)}. Anim Start Y: ${model.position.y.toFixed(2)}, TargetY: ${pieceYOnBoard}`);
 
         model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true;
             child.material = new THREE.MeshStandardMaterial({
@@ -389,7 +383,7 @@ function onWindowResize() {
 // =================================================================
 // Go Game Logic
 // =================================================================
-// ... (All Go game logic functions: getNeighbors, initializeBoardArray, makeActualMove, simulatePlaceStone, findGroup remain unchanged) ...
+// ... (All Go game logic functions remain unchanged) ...
 function getNeighbors(row, col) {
     const neighbors = [];
     if (row > 0) neighbors.push({ row: row - 1, col: col });
@@ -500,11 +494,10 @@ function getAIMove() {
     if (bestMoves.length > 0) return bestMoves[Math.floor(Math.random() * bestMoves.length)];
     else return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : {pass: true};
 }
-
 // =================================================================
 // Game Flow & UI
 // =================================================================
-// ... (Game Flow & UI functions unchanged, but with added null checks for DOM elements) ...
+// ... (Game Flow & UI functions unchanged, with null checks for DOM elements) ...
 function resetGame() {
     if (unsubscribeGameListener) unsubscribeGameListener();
     gameOver = true; activeGameId = null; localPlayerNum = 0; currentPlayer = 1;
@@ -583,7 +576,7 @@ function updateTurnText() {
 // =================================================================
 // Multiplayer (Firebase)
 // =================================================================
-// ... (Multiplayer functions unchanged, but ensure DOM element checks as above if they interact with UI directly) ...
+// ... (Multiplayer functions unchanged) ...
 async function createMultiplayerGame() {
     if (!auth || !auth.currentUser) {console.error("Auth not ready for createMultiplayerGame"); return; }
     resetGame(); gameMode = 'multiplayer'; localPlayerNum = 1; gameOver = false;
@@ -670,3 +663,4 @@ function openModal(modal) { if (modal) modal.classList.remove('hidden'); else co
 function closeModal(modal) { if (modal) modal.classList.add('hidden'); else console.warn("Attempted to close null modal");}
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => alert("Copied!")); }
 
+console.log("main.js: SCRIPT EXECUTION FINISHED (END OF FILE).");

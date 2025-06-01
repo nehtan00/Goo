@@ -4,7 +4,6 @@
 
 // --- Constants ---
 const BOARD_SIZE = 9; // 9x9 board for faster games
-// This map now holds ONLY your specified model paths.
 const PIECE_MODEL_PATHS = {
     'Achilles': 'assets/achilles.glb',
     'War Elephant': 'assets/war_elephant.glb',
@@ -14,38 +13,14 @@ const PIECE_MODEL_PATHS = {
 const DEFAULT_PIECE_KEY = 'Achilles'; // New default piece
 
 // --- DOM Element References ---
-const gameContainer = document.getElementById('game-container');
-const statusText = document.getElementById('status-text');
-const turnText = document.getElementById('turn-text');
-const player1CapturesText = document.getElementById('player1-captures');
-const player2CapturesText = document.getElementById('player2-captures');
-const newGameButton = document.getElementById('new-game-button');
-const joinGameButton = document.getElementById('join-game-button');
-const passTurnButton = document.getElementById('pass-turn-button');
-const rulesStrategyButton = document.getElementById('rules-strategy-button');
-
-// Modals
-const gameSetupModal = document.getElementById('game-setup-modal');
-const joinGameModal = document.getElementById('join-game-modal');
-const shareGameModal = document.getElementById('share-game-modal');
-const rulesStrategyModal = document.getElementById('rules-strategy-modal');
-
-// Modal Controls
-const closeSetupModalButton = gameSetupModal.querySelector('.close-button');
-const closeJoinModalButton = joinGameModal.querySelector('.close-button');
-const closeShareModalButton = shareGameModal.querySelector('.close-button');
-const closeRulesModalButton = rulesStrategyModal.querySelector('.close-button');
-const playerColorInput = document.getElementById('player-color-input');
-const playerPieceSelect = document.getElementById('player-piece-select');
-const difficultySelect = document.getElementById('difficulty-select');
-const startAiGameButton = document.getElementById('start-ai-game-button');
-const createMultGameButton = document.getElementById('create-mult-game-button');
-const joinGameCodeInput = document.getElementById('join-game-code-input');
-const joinMultGameButton = document.getElementById('join-mult-game-button');
-const shareGameCodeDisplay = document.getElementById('share-game-code-display');
-const copyCodeButton = document.getElementById('copy-code-button');
-const shareGameLinkDisplay = document.getElementById('share-game-link-display');
-const copyLinkButton = document.getElementById('copy-link-button');
+// We declare them here, but will assign them after the DOM loads.
+let gameContainer, statusText, turnText, player1CapturesText, player2CapturesText;
+let newGameButton, joinGameButton, passTurnButton, rulesStrategyButton;
+let gameSetupModal, joinGameModal, shareGameModal, rulesStrategyModal;
+let closeSetupModalButton, closeJoinModalButton, closeShareModalButton, closeRulesModalButton;
+let playerColorInput, playerPieceSelect, difficultySelect;
+let startAiGameButton, createMultGameButton, joinGameCodeInput, joinMultGameButton;
+let shareGameCodeDisplay, copyCodeButton, shareGameLinkDisplay, copyLinkButton;
 
 
 // --- Three.js Variables ---
@@ -77,10 +52,43 @@ let player2Settings = { uid: null, color: '#FFFFFF', piece: DEFAULT_PIECE_KEY };
 // =================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ** FIX: Assign all DOM elements AFTER the document is loaded **
+    assignDOMElements();
     initEventListeners();
     waitForAuthAndSetupUI();
     window.addEventListener('resize', onWindowResize, false);
 });
+
+function assignDOMElements() {
+    gameContainer = document.getElementById('game-container');
+    statusText = document.getElementById('status-text');
+    turnText = document.getElementById('turn-text');
+    player1CapturesText = document.getElementById('player1-captures');
+    player2CapturesText = document.getElementById('player2-captures');
+    newGameButton = document.getElementById('new-game-button');
+    joinGameButton = document.getElementById('join-game-button');
+    passTurnButton = document.getElementById('pass-turn-button');
+    rulesStrategyButton = document.getElementById('rules-strategy-button');
+    gameSetupModal = document.getElementById('game-setup-modal');
+    joinGameModal = document.getElementById('join-game-modal');
+    shareGameModal = document.getElementById('share-game-modal');
+    rulesStrategyModal = document.getElementById('rules-strategy-modal');
+    closeSetupModalButton = gameSetupModal.querySelector('.close-button');
+    closeJoinModalButton = joinGameModal.querySelector('.close-button');
+    closeShareModalButton = shareGameModal.querySelector('.close-button');
+    closeRulesModalButton = rulesStrategyModal.querySelector('.close-button');
+    playerColorInput = document.getElementById('player-color-input');
+    playerPieceSelect = document.getElementById('player-piece-select');
+    difficultySelect = document.getElementById('difficulty-select');
+    startAiGameButton = document.getElementById('start-ai-game-button');
+    createMultGameButton = document.getElementById('create-mult-game-button');
+    joinGameCodeInput = document.getElementById('join-game-code-input');
+    joinMultGameButton = document.getElementById('join-mult-game-button');
+    shareGameCodeDisplay = document.getElementById('share-game-code-display');
+    copyCodeButton = document.getElementById('copy-code-button');
+    shareGameLinkDisplay = document.getElementById('share-game-link-display');
+    copyLinkButton = document.getElementById('copy-link-button');
+}
 
 function waitForAuthAndSetupUI() {
     if (typeof auth !== 'undefined') {
@@ -377,7 +385,7 @@ function getAIMove() {
         if (capturedStones === null) continue; 
 
         score += capturedStones.length * 100;
-        board = tempBoard; // Revert to pre-move state for next sim
+        board = tempBoard; 
 
         const neighbors = getNeighbors(move.r, move.c);
         for (const n of neighbors) {

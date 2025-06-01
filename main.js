@@ -5,9 +5,6 @@
 // --- Constants ---
 const BOARD_SIZE = 9; // 9x9 board for faster games
 const PIECE_MODEL_PATHS = {
-    'zeus': 'assets/zeus.glb',
-    'athena': 'assets/athena.glb',
-    'poseidon': 'assets/poseidon.glb',
     'Achilles': 'assets/achilles.glb',
     'War Elephant': 'assets/war_elephant.glb',
     'Knight Horse': 'assets/knight_horse.glb',

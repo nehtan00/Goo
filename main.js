@@ -1,5 +1,5 @@
 // =================================================================
-// Mythos Go - main.js (PBR Marble Board & Visual Polish)
+// Mythos Go - main.js (AO & Displacement Maps for Board)
 // =================================================================
 
 // --- ES6 Module Imports ---
@@ -22,24 +22,30 @@ const DEFAULT_PIECE_KEY = 'Achilles';
 
 // **PBR TEXTURE PATHS FOR THE BOARD**
 // !! IMPORTANT !! Replace these with the actual paths to YOUR PBR textures in the 'assets' folder
-const MARBLE_ALBEDO_PATH = 'assets/marble_albedo.jpg';    // Your main color texture
-const MARBLE_ROUGHNESS_PATH = 'assets/marble_roughness.jpg'; // Greyscale: white=rough, black=smooth
-const MARBLE_NORMAL_PATH = 'assets/marble_normal.jpg';    // For surface detail (OpenGL format usually)
-// Optional: const MARBLE_AO_PATH = 'assets/your_marble_ao.jpg'; // Ambient Occlusion
+const MARBLE_ALBEDO_PATH = 'assets/marble_albedo.png';    // Your main color texture
+const MARBLE_ROUGHNESS_PATH = 'assets/marble_roughness.png'; // Greyscale: white=rough, black=smooth
+const MARBLE_NORMAL_PATH = 'assets/marble_normal.png';    // For surface detail (OpenGL format usually)
+const MARBLE_AO_PATH = 'assets/marble_ao.png'; // **NEW** Ambient Occlusion
+const MARBLE_DISPLACEMENT_PATH = 'assets/marble_displacement.png'; // **NEW** Displacement/Height
 
 // --- Global DOM Element Variables ---
+// ... (declarations remain the same)
 let gameContainer, statusText, turnText, player1CapturesText, player2CapturesText;
 let newGameButton, joinGameButton, passTurnButton, rulesStrategyButton;
 let gameSetupModal, joinGameModal, shareGameModal, rulesStrategyModal;
 let playerColorInput, playerPieceSelect, difficultySelect;
 let startAiGameButton, createMultGameButton, joinGameCodeInput, joinMultGameButton;
 
+
 // --- Three.js Variables ---
+// ... (declarations remain the same)
 let scene, camera, renderer, raycaster, mouse, controls;
 let boardMesh; 
 let stoneModels = {};
 
+
 // --- Game State Variables ---
+// ... (declarations remain the same)
 let board = [];
 let currentPlayer = 1;
 let gameMode = null;
@@ -59,6 +65,7 @@ let player2Settings = { uid: null, color: '#FFFFFF', piece: DEFAULT_PIECE_KEY };
 // =================================================================
 // Initial Setup
 // =================================================================
+// ... (DOMContentLoaded, assignDOMElements, initEventListeners, waitForAuthAndSetupUI, checkUrlForGameToJoin remain the same)
 document.addEventListener('DOMContentLoaded', () => {
     console.log("main.js: DOMContentLoaded event FIRED.");
     try {
@@ -167,6 +174,7 @@ function checkUrlForGameToJoin() {
     }
 }
 
+
 // =================================================================
 // 3D Scene
 // =================================================================
@@ -208,18 +216,27 @@ function initThreeJS() {
 
 function createFloatingGridBoard() {
     console.log("main.js: createFloatingGridBoard() called.");
-    const boardThickness = 0.6; 
+    const boardThickness = 0.8; 
     const boardRadius = 0.25; 
-    const boardSegments = 5; 
+    // Increase segments for better displacement mapping results
+    const boardSegments = 16; // Previously 6, more segments allow for finer displacement
 
     let boardGeom;
     if (RoundedBoxGeometry) { 
         boardGeom = new RoundedBoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
     } else {
         console.warn("main.js: RoundedBoxGeometry class not available, using BoxGeometry for board.");
-        boardGeom = new THREE.BoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE);
+        // Increase segments for BoxGeometry as well if using displacement
+        boardGeom = new THREE.BoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, 1, boardSegments);
     }
     
+    // Add UV2 attribute for aoMap (Ambient Occlusion)
+    if (boardGeom.attributes.uv) {
+        boardGeom.setAttribute('uv2', new THREE.BufferAttribute(boardGeom.attributes.uv.array, 2));
+    } else {
+        console.warn("Board geometry does not have UV attributes; aoMap might not display correctly.");
+    }
+
     const textureLoader = new THREE.TextureLoader();
     const albedoMap = textureLoader.load(MARBLE_ALBEDO_PATH, undefined, undefined, 
         (err) => console.error(`Failed to load Albedo map: ${MARBLE_ALBEDO_PATH}`, err)
@@ -230,11 +247,17 @@ function createFloatingGridBoard() {
     const normalMap = textureLoader.load(MARBLE_NORMAL_PATH, undefined, undefined,
         (err) => console.error(`Failed to load Normal map: ${MARBLE_NORMAL_PATH}`, err)
     );
+    const aoMap = textureLoader.load(MARBLE_AO_PATH, undefined, undefined,
+        (err) => console.error(`Failed to load AO map: ${MARBLE_AO_PATH}`, err)
+    );
+    const displacementMap = textureLoader.load(MARBLE_DISPLACEMENT_PATH, undefined, undefined,
+        (err) => console.error(`Failed to load Displacement map: ${MARBLE_DISPLACEMENT_PATH}`, err)
+    );
 
-    [albedoMap, roughnessMap, normalMap].forEach(map => {
+    [albedoMap, roughnessMap, normalMap, aoMap, displacementMap].forEach(map => {
         if (map) {
             map.wrapS = map.wrapT = THREE.RepeatWrapping;
-            map.repeat.set(1, 1); // Adjust if your texture is a tileable pattern
+            map.repeat.set(1, 1); // Start with 1,1 tiling. Adjust based on your texture.
             map.anisotropy = renderer.capabilities.getMaxAnisotropy();
         }
     });
@@ -243,8 +266,13 @@ function createFloatingGridBoard() {
         map: albedoMap,             
         roughnessMap: roughnessMap,  
         normalMap: normalMap,       
-        roughness: 0.7,             
-        metalness: 0.05,            
+        aoMap: aoMap,                        // Use AO map
+        aoMapIntensity: 0.7,                 // Adjust AO intensity (0 to 1)
+        displacementMap: displacementMap,    // Use displacement map
+        displacementScale: 0.02,             // Adjust scale (small values usually best)
+        // displacementBias: -0.01,          // Adjust bias if needed (often scale / -2)
+        roughness: 0.6,                      // Base roughness
+        metalness: 0.0,                      // Marble is not metallic
     });
     boardMesh = new THREE.Mesh(boardGeom, boardMat);
     boardMesh.position.set((BOARD_SIZE - 1) / 2, -boardThickness / 2, (BOARD_SIZE - 1) / 2);
@@ -254,23 +282,21 @@ function createFloatingGridBoard() {
     drawBoardGridLines(); 
 }
 
-function drawBoardGridLines() {
-    const lineThickness = 0.035; 
-    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.3, metalness: 0.8 }); 
-    const lineY = 0.01; // Y position in world space for the lines, just above board surface (y=0)
+function drawBoardGridLines() { /* ... unchanged from previous version ... */ 
+    const lineThickness = 0.04; 
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0 }); 
+    const lineY = 0.015; 
     
     const gridLinesGroup = new THREE.Group();
     gridLinesGroup.position.y = lineY; 
         
     for (let i = 0; i < BOARD_SIZE; i++) {
-        // Horizontal lines 
-        const hGeom = new THREE.BoxGeometry(BOARD_SIZE, lineThickness, lineThickness);
+        const hGeom = new THREE.BoxGeometry(BOARD_SIZE - 0.05, lineThickness, lineThickness);
         const hLine = new THREE.Mesh(hGeom, gridLineMaterial);
-        hLine.position.set((BOARD_SIZE -1) / 2, 0, i); // Position relative to group
+        hLine.position.set((BOARD_SIZE -1) / 2, 0, i); 
         gridLinesGroup.add(hLine);
 
-        // Vertical lines 
-        const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, BOARD_SIZE);
+        const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, BOARD_SIZE - 0.05);
         const vLine = new THREE.Mesh(vGeom, gridLineMaterial);
         vLine.position.set(i, 0, (BOARD_SIZE -1) / 2);
         gridLinesGroup.add(vLine);
@@ -279,7 +305,7 @@ function drawBoardGridLines() {
 }
 
 
-function addStoneTo3DScene(x, z, player) { 
+function addStoneTo3DScene(x, z, player) { /* ... unchanged from previous version ... */
     const key = `${x}-${z}`; if (stoneModels[key]) return;
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
@@ -344,7 +370,7 @@ function addStoneTo3DScene(x, z, player) {
     });
 }
 
-function removeStoneFrom3DScene(x, z) {
+function removeStoneFrom3DScene(x, z) { /* ... unchanged from previous version ... */
     const key = `${x}-${z}`; 
     const model = stoneModels[key];
     if (model) {
@@ -378,7 +404,7 @@ function removeStoneFrom3DScene(x, z) {
         animateCapture();
     }
 }
-function onBoardClick(event) {
+function onBoardClick(event) { /* ... unchanged ... */
     if (gameOver || (gameMode === 'multiplayer' && currentPlayer !== localPlayerNum)) return;
     if (!boardMesh) return; 
     const rect = renderer.domElement.getBoundingClientRect();
@@ -390,11 +416,11 @@ function onBoardClick(event) {
         if (col >= 0 && col < BOARD_SIZE && row >= 0 && row < BOARD_SIZE) handlePlayerMove(row, col); 
     }
 }
-function animate() {
+function animate() { /* ... unchanged ... */
     if (!renderer) return; requestAnimationFrame(animate);
     if (controls) controls.update(); renderer.render(scene, camera);
 }
-function onWindowResize() {
+function onWindowResize() { /* ... unchanged ... */
     if (camera && renderer && gameContainer) {
         camera.aspect = gameContainer.clientWidth / gameContainer.clientHeight;
         camera.updateProjectionMatrix(); renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
@@ -402,9 +428,10 @@ function onWindowResize() {
 }
 
 // =================================================================
-// Go Game Logic
+// Go Game Logic (Unchanged)
 // =================================================================
-function getNeighbors(row, col) { /* ... unchanged ... */ 
+// ... (All Go game logic functions: getNeighbors, initializeBoardArray, makeActualMove, simulatePlaceStone, findGroup remain unchanged) ...
+function getNeighbors(row, col) {
     const neighbors = [];
     if (row > 0) neighbors.push({ row: row - 1, col: col });
     if (row < BOARD_SIZE - 1) neighbors.push({ row: row + 1, col: col });
@@ -412,8 +439,8 @@ function getNeighbors(row, col) { /* ... unchanged ... */
     if (col < BOARD_SIZE - 1) neighbors.push({ row: row, col: col + 1 });
     return neighbors;
 }
-function initializeBoardArray() { /* ... unchanged ... */ board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0)); }
-function makeActualMove(row, col, player) { /* ... unchanged ... */
+function initializeBoardArray() { board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0)); }
+function makeActualMove(row, col, player) {
     const simulationResult = simulatePlaceStone(row, col, player, board); 
     if (simulationResult === null) return null; 
     board = simulationResult.newBoard; 
@@ -425,7 +452,7 @@ function makeActualMove(row, col, player) { /* ... unchanged ... */
     } else koState = null;
     return simulationResult.captures; 
 }
-function simulatePlaceStone(row, col, player, boardToSimulateOn) { /* ... unchanged ... */
+function simulatePlaceStone(row, col, player, boardToSimulateOn) {
     if (boardToSimulateOn[row][col] !== 0) return null; 
     let tempBoard = boardToSimulateOn.map(r => r.slice()); 
     tempBoard[row][col] = player;
@@ -445,7 +472,7 @@ function simulatePlaceStone(row, col, player, boardToSimulateOn) { /* ... unchan
     if (koState !== null && boardString === koState) return null; 
     return { newBoard: tempBoard, captures: capturedStonesThisMove };
 }
-function findGroup(startRow, startCol, boardState) { /* ... unchanged ... */
+function findGroup(startRow, startCol, boardState) {
     const player = boardState[startRow][startCol];
     if (player === 0) return { stones: [], liberties: 0 };
     const queue = [{ row: startRow, col: startCol }];
@@ -470,9 +497,10 @@ function findGroup(startRow, startCol, boardState) { /* ... unchanged ... */
     return { stones: groupStones, liberties: libertyPoints.size };
 }
 // =================================================================
-// AI Logic
+// AI Logic (Unchanged)
 // =================================================================
-function getAIMove() { /* ... unchanged ... */
+// ... (getAIMove unchanged) ...
+function getAIMove() { 
     let bestScore = -Infinity; let bestMoves = []; const availableMoves = [];
     for (let r = 0; r < BOARD_SIZE; r++) { for (let c = 0; c < BOARD_SIZE; c++) { if (board[r][c] === 0) availableMoves.push({ r, c }); } }
     if(availableMoves.length === 0) return {pass: true};
@@ -514,7 +542,7 @@ function getAIMove() { /* ... unchanged ... */
     else return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : {pass: true};
 }
 // =================================================================
-// Game Flow & UI
+// Game Flow & UI (Unchanged)
 // =================================================================
 // ... (Game Flow & UI functions unchanged) ...
 function resetGame() {

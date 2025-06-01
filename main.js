@@ -1,5 +1,5 @@
 // =================================================================
-// Mythos Go - main.js (Piece Scale/Align & Grid Fix)
+// Mythos Go - main.js (Firebase Nested Array Fix & Visual Polish)
 // =================================================================
 
 // --- ES6 Module Imports ---
@@ -20,6 +20,7 @@ const PIECE_MODEL_PATHS = {
 };
 const DEFAULT_PIECE_KEY = 'Achilles';
 
+// **USING YOUR SPECIFIED PBR TEXTURE PATHS**
 const MARBLE_ALBEDO_PATH = 'assets/marble_albedo.png';    
 const MARBLE_ROUGHNESS_PATH = 'assets/marble_roughness.png'; 
 const MARBLE_NORMAL_PATH = 'assets/marble_normal.png';    
@@ -39,7 +40,7 @@ let boardMesh;
 let stoneModels = {};
 
 // --- Game State Variables ---
-let board = [];
+let board = []; // This will be the 2D array for game logic
 let currentPlayer = 1;
 let gameMode = null;
 let currentDifficulty = 'easy'; 
@@ -49,10 +50,10 @@ let localPlayerNum = 0;
 let unsubscribeGameListener = null;
 let consecutivePasses = 0;
 let captures = { 1: 0, 2: 0 };
-let koState = null; 
+let koState = null; // Will store string representation of board state for Ko
 
 let player1Settings = { uid: null, color: '#222222', piece: DEFAULT_PIECE_KEY };
-let player2Settings = { uid: null, color: '#3E1929', piece: DEFAULT_PIECE_KEY };
+let player2Settings = { uid: null, color: '#FFFFFF', piece: DEFAULT_PIECE_KEY };
 
 
 // =================================================================
@@ -149,8 +150,7 @@ function checkUrlForGameToJoin() { /* ... unchanged ... */
 // =================================================================
 // 3D Scene
 // =================================================================
-
-function initThreeJS() {
+function initThreeJS() { /* ... Lighting and Renderer setup unchanged ... */
     console.log("main.js: initThreeJS() CALLED.");
     if (!gameContainer) { console.error("main.js: gameContainer not found for Three.js."); return; }
     gameContainer.innerHTML = ''; stoneModels = {};
@@ -161,50 +161,27 @@ function initThreeJS() {
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.4; // Your current exposure setting
+    renderer.toneMappingExposure = 0.9; 
     renderer.outputEncoding = THREE.sRGBEncoding;
     gameContainer.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement); 
     controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2); controls.enableDamping = true;
     controls.dampingFactor = 0.05; controls.minDistance = BOARD_SIZE * 0.7; controls.maxDistance = BOARD_SIZE * 2.5;
     controls.maxPolarAngle = Math.PI / 2 - 0.02; 
-    
-    // Your Candlelight Color Setup
-    const candlelight = 0xffd580; 
-    const groundColor = 0x402808; 
-    const hemiLight = new THREE.HemisphereLight(candlelight, groundColor, 0.8); 
-    hemiLight.position.set(0, 20, 0); 
-    scene.add(hemiLight);
-    
-    const dirLight = new THREE.DirectionalLight(candlelight, 0.7); 
-    dirLight.position.set(10, 15, 12); 
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048; 
-    dirLight.shadow.mapSize.height = 2048; 
-
-    // ** NEW: Shadow Camera properties for dirLight to expand "beam" **
-    const shadowCamSize = BOARD_SIZE * 0.5; // Adjust this multiplier to change beam size (e.g., 1.5, 2.0, 2.5)
-    dirLight.shadow.camera.near = 0.5;    
-    dirLight.shadow.camera.far = 50;      
-    dirLight.shadow.camera.left = -shadowCamSize / 2;
-    dirLight.shadow.camera.right = shadowCamSize / 2;
-    dirLight.shadow.camera.top = shadowCamSize / 2;
-    dirLight.shadow.camera.bottom = -shadowCamSize / 2;
-    // dirLight.shadow.camera.updateProjectionMatrix(); // Usually not needed if set before first render
-
-    scene.add(dirLight);
-
-    const fillLight = new THREE.DirectionalLight(candlelight, 0.3); 
-    fillLight.position.set(-10, 10, -5);
-    scene.add(fillLight);
-    
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0); 
+    hemiLight.position.set(0, 20, 0); scene.add(hemiLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);  
+    dirLight.position.set(10, 15, 12); dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; scene.add(dirLight);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.4); 
+    fillLight.position.set(-10, 10, -5); scene.add(fillLight);
     createFloatingGridBoard(); 
     raycaster = new THREE.Raycaster(); mouse = new THREE.Vector2();
     if (gameContainer) gameContainer.addEventListener('click', onBoardClick, false);
     animate();
 }
 
-function createFloatingGridBoard() { /* ... PBR texture loading unchanged ... */
+function createFloatingGridBoard() { /* ... PBR texture loading from previous version ... */
     console.log("main.js: createFloatingGridBoard() called.");
     const boardThickness = 0.7; 
     const boardRadius = 0.25; 
@@ -219,6 +196,7 @@ function createFloatingGridBoard() { /* ... PBR texture loading unchanged ... */
     if (boardGeom.attributes.uv) { boardGeom.setAttribute('uv2', new THREE.BufferAttribute(boardGeom.attributes.uv.array, 2)); } 
     else { console.warn("Board geometry does not have UV attributes; aoMap might not display correctly."); }
     const textureLoader = new THREE.TextureLoader();
+    console.log("Loading PBR Textures with paths:", MARBLE_ALBEDO_PATH, MARBLE_ROUGHNESS_PATH, MARBLE_NORMAL_PATH, MARBLE_AO_PATH, MARBLE_DISPLACEMENT_PATH);
     const albedoMap = textureLoader.load(MARBLE_ALBEDO_PATH, undefined, undefined, (err) => console.error(`Albedo Load Error: ${MARBLE_ALBEDO_PATH}`, err));
     const roughnessMap = textureLoader.load(MARBLE_ROUGHNESS_PATH, undefined, undefined, (err) => console.error(`Roughness Load Error: ${MARBLE_ROUGHNESS_PATH}`, err));
     const normalMap = textureLoader.load(MARBLE_NORMAL_PATH, undefined, undefined, (err) => console.error(`Normal Load Error: ${MARBLE_NORMAL_PATH}`, err));
@@ -238,31 +216,26 @@ function createFloatingGridBoard() { /* ... PBR texture loading unchanged ... */
 }
 
 function drawBoardGridLines() {
-    const lineThickness = 0.04; 
-    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.85, metalness: 0.0 }); 
-    // The board's top surface is at world Y=0. Grid lines are placed just above this.
+    const lineThickness = 0.035; 
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.85, metalness: .9 }); 
     const lineY = 0.01; 
     const gridLinesGroup = new THREE.Group();
-    // Position the entire group of lines relative to the board's actual position and scale
-    // Board center is at ((BOARD_SIZE-1)/2, 0, (BOARD_SIZE-1)/2) for its top surface
-    gridLinesGroup.position.set(0, lineY, 0); // Lines Y position
-        
-    // Grid lines should span from 0 to BOARD_SIZE-1
-    const gridExtent = BOARD_SIZE - 1;
+    gridLinesGroup.position.y = lineY; 
+    
+    // Grid lines should span from 0 to BOARD_SIZE-1 (which is a length of BOARD_SIZE-1)
+    const gridSpan = BOARD_SIZE - 1;
 
     for (let i = 0; i < BOARD_SIZE; i++) { // i goes from 0 to 8 for a 9-line grid
         // Horizontal lines (run along X-axis, at Z = i)
-        // Their length is gridExtent. Their center X-coordinate is gridExtent / 2.
-        const hGeom = new THREE.BoxGeometry(gridExtent, lineThickness, lineThickness);
+        const hGeom = new THREE.BoxGeometry(gridSpan, lineThickness, lineThickness); // Correct length
         const hLine = new THREE.Mesh(hGeom, gridLineMaterial);
-        hLine.position.set(gridExtent / 2, 0, i); // Position relative to group's origin (0, lineY, 0)
+        hLine.position.set(gridSpan / 2, 0, i); // Centered correctly
         gridLinesGroup.add(hLine);
 
         // Vertical lines (run along Z-axis, at X = i)
-        // Their length is gridExtent. Their center Z-coordinate is gridExtent / 2.
-        const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, gridExtent);
+        const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, gridSpan); // Correct length
         const vLine = new THREE.Mesh(vGeom, gridLineMaterial);
-        vLine.position.set(i, 0, gridExtent / 2);
+        vLine.position.set(i, 0, gridSpan / 2); // Centered correctly
         gridLinesGroup.add(vLine);
     }
     scene.add(gridLinesGroup);
@@ -274,43 +247,39 @@ function addStoneTo3DScene(x, z, player) {
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
-    // **TARGET VISUAL HEIGHT FOR ALL PIECES (in world units)**
-    const TARGET_PIECE_HEIGHT = 1.8; // Make pieces taller, adjust as needed
-    const pieceYOnBoard = 1.0;    // Final Y for piece BASE, slightly above grid lines
+    const pieceTargetHeight = 2; // **Desired final height of the piece on the board**
+    const pieceYOnBoard = 1.3;    // Y for piece BASE, clearly on top of grid lines
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {
         const model = gltf.scene; 
-        
-        // 1. Calculate initial bounding box to get original dimensions
         const initialBox = new THREE.Box3().setFromObject(model);
         const initialSize = initialBox.getSize(new THREE.Vector3()); 
         
-        if (initialSize.y === 0) { // Avoid division by zero if model is flat or empty
-            console.error("Loaded model has zero height:", modelPath, initialSize);
-            // Apply a default scale if height is zero
-            model.scale.set(0.5, 0.5, 0.5); 
+        if (initialSize.y === 0) { 
+            console.error("Loaded model has zero initial height:", modelPath, initialSize);
+            model.scale.set(0.5,0.5,0.5); // Apply a default small scale if model is flat
         } else {
-            // 2. Calculate scale factor based on target height
-            const scaleFactor = TARGET_PIECE_HEIGHT / initialSize.y;
+            const scaleFactor = pieceTargetHeight / initialSize.y; // Scale based on Y to achieve target height
             model.scale.set(scaleFactor, scaleFactor, scaleFactor);
         }
         
-        // 3. After scaling, get the new bounding box
-        const scaledBox = new THREE.Box3().setFromObject(model);
+        const newScaledBox = new THREE.Box3().setFromObject(model);
+        // Shift model so its visual base (min.y of its bounding box after scaling) 
+        // aligns with its local y=0 origin.
+        model.position.y -= newScaledBox.min.y; 
         
-        // 4. Shift model's internal origin so its visual base is at its local y=0
-        //    and its visual XZ center is at its local (0,_,0)
-        const centerOffset = scaledBox.getCenter(new THREE.Vector3());
+        // Now, also center its X and Z based on its bounding box for precise grid placement
+        const centerOffset = newScaledBox.getCenter(new THREE.Vector3());
         model.position.x -= centerOffset.x;
-        model.position.y -= scaledBox.min.y; 
         model.position.z -= centerOffset.z;
         
-        // 5. Set world position for animation start
         const animationStartY = pieceYOnBoard + 1.5; 
+        // Place the model's local origin (now its visual base-center) at the grid intersection (x, z)
+        // and the starting Y height for animation.
         model.position.set(x, animationStartY, z); 
 
-        console.log(`Piece: ${settings.piece} at Grid(${x},${z}). Initial Size Y: ${initialSize.y.toFixed(3)}, ScaleFactor: ${model.scale.x.toFixed(2)}, Target Y Base: ${pieceYOnBoard}`);
+        // console.log(`Piece: ${settings.piece} Grid(${x},${z}) TargetH: ${pieceTargetHeight} ScaleF: ${model.scale.x.toFixed(3)} FinalYBase: ${pieceYOnBoard}`);
 
         model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true;
             child.material = new THREE.MeshStandardMaterial({
@@ -320,11 +289,11 @@ function addStoneTo3DScene(x, z, player) {
         scene.add(model); stoneModels[key] = model;
         
         let currentY = model.position.y; 
-        const targetY = pieceYOnBoard; 
+        const targetY = pieceYOnBoard; // The model's local origin (now its base) should land here
         const dropSpeed = 0.10; 
 
         function animateDrop() { /* ... unchanged ... */ }
-        animateDrop(); // Call the unchanged animateDrop
+        animateDrop(); 
         function animateDrop() { 
             if (currentY > targetY) { 
                 currentY -= dropSpeed * Math.max(0.3, (currentY - targetY));
@@ -334,9 +303,8 @@ function addStoneTo3DScene(x, z, player) {
         }
     }, undefined, error => { /* ... fallback code unchanged ... */ 
         console.error(`Model load error for ${modelPath}:`, error);
-        const pieceBaseScaleMultiplier = 1.89; // Match the target for GLB
-        const stoneRadius = 0.3 * (TARGET_PIECE_HEIGHT / 0.25); // Approximate based on target height
-        const stoneHeight = 0.1 * (TARGET_PIECE_HEIGHT / 0.45);
+        const stoneRadius = 0.3 * (pieceTargetHeight / 0.15); 
+        const stoneHeight = 0.1 * (pieceTargetHeight / 0.15);
         const geom = new THREE.CylinderGeometry(stoneRadius, stoneRadius, stoneHeight, 24);
         const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(settings.color), roughness: 0.5, metalness: 0.1 });
         const piece = new THREE.Mesh(geom, mat); piece.castShadow = true; 
@@ -389,7 +357,7 @@ function onWindowResize() { /* ... unchanged ... */ if (camera && renderer && ga
 // =================================================================
 // Go Game Logic (Unchanged)
 // =================================================================
-// ... (All Go game logic functions remain unchanged) ...
+// ... (All Go game logic functions: getNeighbors, initializeBoardArray, makeActualMove, simulatePlaceStone, findGroup remain unchanged) ...
 function getNeighbors(row, col) { const neighbors = []; if (row > 0) neighbors.push({ row: row - 1, col: col }); if (row < BOARD_SIZE - 1) neighbors.push({ row: row + 1, col: col }); if (col > 0) neighbors.push({ row: row, col: col - 1 }); if (col < BOARD_SIZE - 1) neighbors.push({ row: row, col: col + 1 }); return neighbors;}
 function initializeBoardArray() { board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0)); }
 function makeActualMove(row, col, player) { const simulationResult = simulatePlaceStone(row, col, player, board); if (simulationResult === null) return null; board = simulationResult.newBoard; if (simulationResult.captures.length > 0) { let boardStateBeforeThisMove = board.map(r => r.slice()); boardStateBeforeThisMove[row][col] = 0; simulationResult.captures.forEach(s => boardStateBeforeThisMove[s.row][s.col] = player === 1 ? 2 : 1); koState = boardStateBeforeThisMove.map(r=>r.join('')).join(''); } else koState = null; return simulationResult.captures; }
@@ -420,12 +388,105 @@ function updateTurnText() { if (gameOver) return; if (!turnText) return; if (gam
 // =================================================================
 // Multiplayer (Firebase)
 // =================================================================
-// ... (Multiplayer functions unchanged) ...
-async function createMultiplayerGame() { if (!auth || !auth.currentUser) {console.error("Auth not ready for createMultiplayerGame"); return; } resetGame(); gameMode = 'multiplayer'; localPlayerNum = 1; gameOver = false; player1Settings.uid = auth.currentUser.uid; player1Settings.color = playerColorInput.value; player1Settings.piece = playerPieceSelect.value; const newGameData = { player1: player1Settings, player2: null, board, captures, currentPlayer: 1, status: 'waiting', consecutivePasses: 0, koState: null, createdAt: firebase.firestore.FieldValue.serverTimestamp() }; try { const gameRef = await db.collection('games').add(newGameData); activeGameId = gameRef.id; initThreeJS(); updateStatusText("Waiting for opponent..."); closeModal(gameSetupModal); const shareCodeDisplay = document.getElementById('share-game-code-display'); const shareLinkDisplay = document.getElementById('share-game-link-display'); if(shareCodeDisplay) shareCodeDisplay.value = activeGameId; if(shareLinkDisplay) shareLinkDisplay.value = `${window.location.origin}${window.location.pathname}?game=${activeGameId}`; openModal(shareGameModal); listenToGameUpdates(activeGameId); } catch (error) { console.error("Error creating game:", error); }}
-async function joinMultiplayerGame(gameId) { if (!auth || !auth.currentUser) { console.error("Auth not ready for joinMultiplayerGame"); return;} resetGame(); const gameRef = db.collection('games').doc(gameId); try { const doc = await gameRef.get(); if (!doc.exists) { alert("Game not found."); return; } const gameData = doc.data(); if (gameData.player2 && gameData.player2.uid !== auth.currentUser.uid) { alert("Game is full."); return; } if (gameData.player1.uid === auth.currentUser.uid) { alert("Cannot join your own game."); return; } localPlayerNum = 2; player2Settings.uid = auth.currentUser.uid; player2Settings.color = gameData.player1.color === '#FFFFFF' ? '#222222' : '#FFFFFF'; player2Settings.piece = playerPieceSelect.value; await gameRef.update({ player2: player2Settings, status: 'active' }); activeGameId = gameId; listenToGameUpdates(activeGameId); closeModal(joinGameModal); } catch (error) { console.error("Error joining game:", error); }}
-function listenToGameUpdates(gameId) { if (unsubscribeGameListener) unsubscribeGameListener(); unsubscribeGameListener = db.collection('games').doc(gameId) .onSnapshot(doc => { if (!doc.exists) { updateStatusText("Game deleted."); resetGame(); return; } const gameData = doc.data(); if (!renderer && !gameOver) initThreeJS(); if (gameMode === 'multiplayer' && localPlayerNum !== gameData.currentPlayer) { board = gameData.board; } else if (JSON.stringify(board) !== JSON.stringify(gameData.board)) { board = gameData.board; } captures = gameData.captures; currentPlayer = gameData.currentPlayer; consecutivePasses = gameData.consecutivePasses; koState = gameData.koState; player1Settings = gameData.player1; if(gameData.player2) player2Settings = gameData.player2; sync3DAndUI(gameData); if (gameData.gameOver) { gameOver = true; endGame(); if (unsubscribeGameListener) unsubscribeGameListener(); } else { gameOver = false; if(passTurnButton) passTurnButton.classList.remove('hidden'); updateTurnText(); } }, error => { console.error("Firebase listener error:", error); updateStatusText("Connection error."); });}
-function sync3DAndUI(gameData) { Object.values(stoneModels).forEach(model => scene.remove(model)); stoneModels = {}; for(let r=0; r<BOARD_SIZE; r++) { for(let c=0; c<BOARD_SIZE; c++) { if(gameData.board[r][c] !== 0) addStoneTo3DScene(c, r, gameData.board[r][c]); } } updateScoreUI();}
-async function updateGameInFirebase(dataToUpdate) { if (!activeGameId || !auth || !auth.currentUser) return; try { await db.collection('games').doc(activeGameId).update(dataToUpdate); } catch (error) { console.error("Firebase update error:", error); }}
+// ... (Multiplayer functions with Firebase nested array fix) ...
+async function createMultiplayerGame() {
+    if (!auth || !auth.currentUser) {console.error("Auth not ready for createMultiplayerGame"); return; }
+    resetGame(); gameMode = 'multiplayer'; localPlayerNum = 1; gameOver = false;
+    player1Settings.uid = auth.currentUser.uid;
+    player1Settings.color = playerColorInput.value;
+    player1Settings.piece = playerPieceSelect.value; 
+    const newGameData = {
+        player1: player1Settings, player2: null,
+        boardString: JSON.stringify(board), // Store board as a JSON string
+        captures, currentPlayer: 1, status: 'waiting', 
+        consecutivePasses: 0, koState: koState, // koState is already a string or null
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    try {
+        const gameRef = await db.collection('games').add(newGameData); activeGameId = gameRef.id;
+        initThreeJS(); updateStatusText("Waiting for opponent..."); closeModal(gameSetupModal);
+        const shareCodeDisplay = document.getElementById('share-game-code-display');
+        const shareLinkDisplay = document.getElementById('share-game-link-display');
+        if(shareCodeDisplay) shareCodeDisplay.value = activeGameId;
+        if(shareLinkDisplay) shareLinkDisplay.value = `${window.location.origin}${window.location.pathname}?game=${activeGameId}`;
+        openModal(shareGameModal); listenToGameUpdates(activeGameId);
+    } catch (error) { 
+        console.error("Error creating game:", error); 
+        console.error("Data that caused error in createMultiplayerGame:", newGameData);
+    }
+}
+async function joinMultiplayerGame(gameId) { /* ... unchanged ... */ 
+    if (!auth || !auth.currentUser) { console.error("Auth not ready for joinMultiplayerGame"); return;}
+    resetGame(); const gameRef = db.collection('games').doc(gameId);
+    try {
+        const doc = await gameRef.get();
+        if (!doc.exists) { alert("Game not found."); return; }
+        const gameData = doc.data();
+        if (gameData.player2 && gameData.player2.uid !== auth.currentUser.uid) { alert("Game is full."); return; }
+        if (gameData.player1.uid === auth.currentUser.uid) { alert("Cannot join your own game."); return; }
+        localPlayerNum = 2; player2Settings.uid = auth.currentUser.uid;
+        player2Settings.color = gameData.player1.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
+        player2Settings.piece = playerPieceSelect.value; 
+        await gameRef.update({ player2: player2Settings, status: 'active' });
+        activeGameId = gameId; listenToGameUpdates(activeGameId); closeModal(joinGameModal);
+    } catch (error) { console.error("Error joining game:", error); }
+}
+function listenToGameUpdates(gameId) { /* ... with boardString parsing ... */
+    if (unsubscribeGameListener) unsubscribeGameListener();
+    unsubscribeGameListener = db.collection('games').doc(gameId)
+        .onSnapshot(doc => {
+            if (!doc.exists) { updateStatusText("Game deleted."); resetGame(); return; }
+            const gameData = doc.data();
+            if (!renderer && !gameOver) initThreeJS();
+            
+            if (gameData.boardString) {
+                try { board = JSON.parse(gameData.boardString); } 
+                catch (e) { console.error("Error parsing boardString from Firebase:", e, gameData.boardString); initializeBoardArray(); }
+            } else { console.warn("boardString missing, initializing empty board."); initializeBoardArray(); }
+
+            koState = gameData.koState !== undefined ? gameData.koState : null; 
+            
+            captures = gameData.captures; 
+            currentPlayer = gameData.currentPlayer;
+            consecutivePasses = gameData.consecutivePasses; 
+            player1Settings = gameData.player1; if(gameData.player2) player2Settings = gameData.player2;
+            
+            sync3DAndUI(); 
+            
+            if (gameData.gameOver) {
+                gameOver = true; endGame();
+                if (unsubscribeGameListener) unsubscribeGameListener();
+            } else {
+                gameOver = false; 
+                if(passTurnButton) passTurnButton.classList.remove('hidden'); 
+                updateTurnText();
+            }
+        }, error => { console.error("Firebase listener error:", error); updateStatusText("Connection error."); });
+}
+function sync3DAndUI() { /* ... uses global board ... */
+     Object.values(stoneModels).forEach(model => scene.remove(model)); stoneModels = {};
+     for(let r=0; r<BOARD_SIZE; r++) {
+         for(let c=0; c<BOARD_SIZE; c++) {
+             if(board[r][c] !== 0) addStoneTo3DScene(c, r, board[r][c]);
+         }
+     }
+     updateScoreUI();
+}
+async function updateGameInFirebase(dataToUpdate) { /* ... with boardString stringification ... */
+    if (!activeGameId || !auth || !auth.currentUser) return;
+    const dataToSend = { ...dataToUpdate }; 
+    if (dataToSend.hasOwnProperty('board')) {
+        dataToSend.boardString = JSON.stringify(dataToSend.board);
+        delete dataToSend.board; 
+    }
+    // koState is already a string or null from our game logic.
+    try { 
+        await db.collection('games').doc(activeGameId).update(dataToSend); 
+    } catch (error) { 
+        console.error("Firebase update error:", error);
+        console.error("Data that caused update error:", dataToSend);
+    }
+}
 
 // --- Utility Functions ---
 function openModal(modal) { if (modal) modal.classList.remove('hidden'); else console.warn("Attempted to open null modal"); }

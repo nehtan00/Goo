@@ -1,0 +1,305 @@
+/* --- Global Styles & Font --- */
+:root {
+    --primary-font: 'Cinzel', serif;
+    --text-color: #333;
+    --background-color: #f7f5f2; /* A warmer, parchment-like off-white */
+    --border-color: #000000;
+}
+
+body {
+    font-family: Arial, sans-serif; /* A sans-serif fallback */
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+/* --- Header --- */
+header {
+    background-color: #ffffff;
+    padding: 15px 30px;
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* Allows wrapping on small screens */
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logo-fish {
+    width: 50px;
+    height: auto;
+}
+
+header h1 {
+    font-family: var(--primary-font);
+    font-size: 1.8em;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--border-color);
+}
+
+header nav {
+    margin-left: auto; /* Pushes the nav to the right */
+}
+
+/* --- Main Content & Game Area --- */
+main {
+    flex-grow: 1;
+    padding: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#game-container {
+    width: 90vw;
+    height: 90vw; /* Make it square for the Go board */
+    max-width: 500px; /* Limit max size */
+    max-height: 500px;
+    margin: 20px auto;
+    background-color: #d2b48c; /* Tan/wood color for Go board */
+    border: 1px solid #ccc;
+    position: relative;
+    cursor: pointer;
+}
+
+#game-info-panel, #action-buttons {
+    margin-top: 15px;
+}
+
+#score-board {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    font-family: var(--primary-font);
+    font-weight: 700;
+}
+
+#status-text {
+    font-family: var(--primary-font);
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+#turn-text {
+    font-size: 1rem;
+    min-height: 1.2em; /* Prevents layout shift when text appears */
+}
+
+/* --- Buttons --- */
+button {
+    font-family: var(--primary-font);
+    font-weight: 700;
+    text-transform: uppercase;
+    background: none;
+    border: 2px solid var(--border-color);
+    padding: 10px 20px;
+    margin: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #fff;
+    color: var(--border-color);
+}
+
+button:hover, button:focus {
+    background-color: var(--border-color);
+    color: #ffffff;
+    outline: none;
+}
+
+#action-buttons button {
+    font-size: 1rem;
+}
+
+/* --- Footer --- */
+footer {
+    background-color: #ffffff;
+    color: #555;
+    text-align: center;
+    padding: 15px;
+    border-top: 2px solid var(--border-color);
+    font-size: 0.8em;
+    letter-spacing: 0.5px;
+}
+
+/* --- Modal Styles --- */
+.modal-overlay {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    overflow-y: auto; /* Allow scrolling for long modals */
+}
+
+.modal-overlay:not(.hidden) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background-color: #ffffff;
+    padding: 30px;
+    border: 2px solid var(--border-color);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    text-align: left;
+    margin: 20px 0; /* Add margin for scrollable modals */
+}
+
+.modal-content.modal-large {
+    max-width: 800px; /* Wider modal for rules */
+}
+
+
+.modal-content h2 {
+    font-family: var(--primary-font);
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 25px;
+    text-transform: uppercase;
+    color: var(--border-color);
+}
+
+.close-button {
+    position: absolute;
+    top: 5px;
+    right: 15px;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #aaa;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+.close-button:hover {
+    color: var(--border-color);
+    background: none;
+}
+
+/* --- Form Elements within Modals --- */
+.setup-section, .rules-section, .strategy-section {
+    border-top: 1px solid #ccc;
+    padding-top: 20px;
+    margin-top: 20px;
+}
+.setup-section:first-of-type {
+    border-top: none;
+}
+
+.modal-content label {
+    display: inline-block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.modal-content input[type="text"],
+.modal-content select {
+    width: 100%;
+    box-sizing: border-box; /* Important for padding */
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.modal-content input[type="color"] {
+    width: 50px;
+    height: 50px;
+    padding: 0;
+    border: 1px solid #ccc;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+
+.modal-content button {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.share-input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.share-input-group input {
+    flex-grow: 1;
+    margin-bottom: 0;
+}
+.share-input-group button {
+    width: auto;
+    margin-top: 0;
+    flex-shrink: 0;
+}
+
+/* --- Rules/Strategy Modal Specific Styles --- */
+#rules-strategy-modal h3 {
+    font-family: var(--primary-font);
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+#rules-strategy-modal ul, #rules-strategy-modal ol {
+    padding-left: 25px;
+}
+#rules-strategy-modal li {
+    margin-bottom: 15px;
+}
+#rules-strategy-modal li p {
+    margin-top: 5px;
+    font-size: 0.95em;
+    color: #555;
+}
+#rules-strategy-modal li p em {
+    font-style: italic;
+    color: #000;
+}
+
+
+/* --- Utility Classes --- */
+.hidden {
+    display: none !important;
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 600px) {
+    header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    header h1 {
+        font-size: 1.5em;
+    }
+    #game-container {
+        width: 95vw;
+        height: 95vw; /* Maintain square aspect ratio */
+    }
+    .modal-content {
+        padding: 20px;
+    }
+}

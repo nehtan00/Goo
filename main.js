@@ -231,8 +231,8 @@ function createFloatingGridBoard() { /* ... PBR texture loading from previous ve
         if (map) { map.wrapS = map.wrapT = THREE.RepeatWrapping; map.repeat.set(1, 1); map.anisotropy = renderer.capabilities.getMaxAnisotropy(); }
     });
     const boardMat = new THREE.MeshStandardMaterial({ 
-        map: albedoMap, roughnessMap: roughnessMap, normalMap: normalMap, aoMap: aoMap, aoMapIntensity: 0.6, 
-        displacementMap: displacementMap, displacementScale: 0.01, roughness: 0.5, metalness: 0.0,
+        map: albedoMap, roughnessMap: roughnessMap, normalMap: normalMap, aoMap: aoMap, aoMapIntensity: 0.8, 
+        displacementMap: displacementMap, displacementScale: 0.09, roughness: 0.1, metalness: 0.4,
     });
     boardMesh = new THREE.Mesh(boardGeom, boardMat);
     boardMesh.position.set((BOARD_SIZE - 1) / 2, -boardThickness / 2, (BOARD_SIZE - 1) / 2);
@@ -273,7 +273,7 @@ function addStoneTo3DScene(x, z, player) {
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
     const pieceTargetHeight = 1.3; // **Desired final height of the piece on the board**
-    const pieceYOnBoard = 1;    // Y for piece BASE, clearly on top of grid lines
+    const pieceYOnBoard = 0.3;    // Y for piece BASE, clearly on top of grid lines
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {

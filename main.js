@@ -276,7 +276,7 @@ function addStoneTo3DScene(x, z, player) {
     
     // **TARGET VISUAL HEIGHT FOR ALL PIECES (in world units)**
     const TARGET_PIECE_HEIGHT = 1.8; // Make pieces taller, adjust as needed
-    const pieceYOnBoard = 2.0;    // Final Y for piece BASE, slightly above grid lines
+    const pieceYOnBoard = 1.0;    // Final Y for piece BASE, slightly above grid lines
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {

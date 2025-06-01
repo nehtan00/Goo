@@ -1,21 +1,19 @@
 // =================================================================
-// Mythos Go - main.js (ES Module, Final Visual Polish)
+// Mythos Go - main.js (Module & Initialization Fix)
 // =================================================================
 
 // --- ES6 Module Imports ---
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-// Attempt to import RoundedBoxGeometry, a fallback to BoxGeometry is in createFloatingGridBoard
-// Note: The path 'three/addons/geometries/RoundedBoxGeometry.js' is based on the import map in index.html
-// If this specific path doesn't work, it means unpkg might structure JSM differently or it's not a standard export.
-let RoundedBoxGeometry;
+// Attempt to import RoundedBoxGeometry
+// The import map in index.html should map 'three/addons/' correctly.
+let RoundedBoxGeometryInstance;
 try {
-    const RBox = await import('three/addons/geometries/RoundedBoxGeometry.js');
-    RoundedBoxGeometry = RBox.RoundedBoxGeometry;
+    const RBoxModule = await import('three/addons/geometries/RoundedBoxGeometry.js');
+    RoundedBoxGeometryInstance = RBoxModule.RoundedBoxGeometry;
 } catch (e) {
-    console.warn("Could not import RoundedBoxGeometry dynamically, will try THREE.RoundedBoxGeometry or fallback.", e);
-    // We'll try THREE.RoundedBoxGeometry later, or fallback if that also fails
+    console.warn("Could not import RoundedBoxGeometry as a module. Check import map and CDN path. Falling back to BoxGeometry if THREE.RoundedBoxGeometry is also not available globally.", e);
 }
 
 
@@ -59,13 +57,22 @@ let player2Settings = { uid: null, color: '#FFFFFF', piece: DEFAULT_PIECE_KEY };
 
 
 // =================================================================
-// Initial Setup
+// Initial Setup: DOMContentLoaded ensures HTML is ready
 // =================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    assignDOMElements();
-    initEventListeners();
-    waitForAuthAndSetupUI();
-    window.addEventListener('resize', onWindowResize, false);
+    console.log("DOM fully loaded and parsed");
+    try {
+        assignDOMElements();
+        console.log("DOM elements assigned.");
+        initEventListeners();
+        console.log("Event listeners initialized.");
+        waitForAuthAndSetupUI();
+        console.log("Auth setup initiated.");
+        window.addEventListener('resize', onWindowResize, false);
+    } catch (error) {
+        console.error("Error during initial setup:", error);
+        statusText.textContent = "Error initializing game. Please check console.";
+    }
 });
 
 function assignDOMElements() {
@@ -89,47 +96,59 @@ function assignDOMElements() {
     createMultGameButton = document.getElementById('create-mult-game-button');
     joinGameCodeInput = document.getElementById('join-game-code-input');
     joinMultGameButton = document.getElementById('join-mult-game-button');
+
+    // Check if a crucial element is missing (example)
+    if (!newGameButton) {
+        console.error("newGameButton not found in DOM!");
+    }
 }
 
 function initEventListeners() {
-    newGameButton.addEventListener('click', () => openModal(gameSetupModal));
-    joinGameButton.addEventListener('click', () => openModal(joinGameModal));
-    rulesStrategyButton.addEventListener('click', () => openModal(rulesStrategyModal));
-    passTurnButton.addEventListener('click', handlePassTurn);
+    // Ensure elements exist before adding listeners
+    if (newGameButton) newGameButton.addEventListener('click', () => openModal(gameSetupModal)); else console.error("New Game button not found for listener.");
+    if (joinGameButton) joinGameButton.addEventListener('click', () => openModal(joinGameModal)); else console.error("Join Game button not found for listener.");
+    if (rulesStrategyButton) rulesStrategyButton.addEventListener('click', () => openModal(rulesStrategyModal)); else console.error("Rules button not found for listener.");
+    if (passTurnButton) passTurnButton.addEventListener('click', handlePassTurn); else console.error("Pass Turn button not found for listener.");
+    
     document.querySelectorAll('.close-button').forEach(button => {
         const modalId = button.getAttribute('data-modal-id');
         const modalToClose = document.getElementById(modalId);
         if (modalToClose) {
              button.addEventListener('click', () => closeModal(modalToClose));
         } else {
-            console.warn("Could not find modal for close button:", modalId);
+            console.warn("Could not find modal for close button with ID:", modalId);
         }
     });
-    startAiGameButton.addEventListener('click', startNewAIGame);
-    createMultGameButton.addEventListener('click', createMultiplayerGame);
-    joinMultGameButton.addEventListener('click', () => {
+
+    if (startAiGameButton) startAiGameButton.addEventListener('click', startNewAIGame); else console.error("Start AI Game button not found for listener.");
+    if (createMultGameButton) createMultGameButton.addEventListener('click', createMultiplayerGame); else console.error("Create Multiplayer Game button not found for listener.");
+    if (joinMultGameButton) joinMultGameButton.addEventListener('click', () => {
         const gameId = joinGameCodeInput.value.trim();
         if (gameId) joinMultiplayerGame(gameId);
         else alert("Please enter a game code.");
-    });
-    if(document.getElementById('copy-code-button')) { 
-        document.getElementById('copy-code-button').addEventListener('click', () => copyToClipboard(document.getElementById('share-game-code-display').value));
-        document.getElementById('copy-link-button').addEventListener('click', () => copyToClipboard(document.getElementById('share-game-link-display').value));
-    }
+    }); else console.error("Join Multiplayer Game with Code button not found for listener.");
+    
+    const copyCodeBtn = document.getElementById('copy-code-button');
+    const copyLinkBtn = document.getElementById('copy-link-button');
+    if(copyCodeBtn) copyCodeBtn.addEventListener('click', () => copyToClipboard(document.getElementById('share-game-code-display').value));
+    if(copyLinkBtn) copyLinkBtn.addEventListener('click', () => copyToClipboard(document.getElementById('share-game-link-display').value));
 }
 
 function waitForAuthAndSetupUI() {
-    if (typeof auth !== 'undefined') {
+    // Firebase 'auth' should be globally available from firebase.js
+    if (typeof auth !== 'undefined' && auth) {
         auth.onAuthStateChanged(user => {
             if (user) {
                 player1Settings.uid = user.uid; 
                 checkUrlForGameToJoin();
             } else {
-                statusText.textContent = "Connecting to game services...";
+                // This is normal before anonymous sign-in completes
+                // console.log("Waiting for user (anonymous sign-in)...");
+                // statusText.textContent = "Connecting to game services...";
             }
         });
     } else {
-        console.error("Firebase Auth not available.");
+        console.error("Firebase Auth object not available at waitForAuthAndSetupUI. Check firebase.js loading and initialization.");
         statusText.textContent = "Error: Cannot connect to Authentication services.";
     }
 }
@@ -137,8 +156,8 @@ function waitForAuthAndSetupUI() {
 function checkUrlForGameToJoin() {
     const urlParams = new URLSearchParams(window.location.search);
     const gameIdFromUrl = urlParams.get('game');
-    if (gameIdFromUrl && gameSetupModal) {
-        joinGameCodeInput.value = gameIdFromUrl;
+    if (gameIdFromUrl && gameSetupModal) { // Check if joinGameCodeInput is also ready if needed
+        if(joinGameCodeInput) joinGameCodeInput.value = gameIdFromUrl;
         openModal(joinGameModal);
         statusText.textContent = `Attempting to join game: ${gameIdFromUrl}`;
     }
@@ -148,6 +167,10 @@ function checkUrlForGameToJoin() {
 // 3D Scene
 // =================================================================
 function initThreeJS() {
+    if (!gameContainer) {
+        console.error("gameContainer not found. Cannot initialize Three.js scene.");
+        return;
+    }
     gameContainer.innerHTML = ''; stoneModels = {};
     scene = new THREE.Scene(); scene.background = new THREE.Color(0xdddddd); 
     camera = new THREE.PerspectiveCamera(45, gameContainer.clientWidth / gameContainer.clientHeight, 0.1, 1000);
@@ -179,14 +202,13 @@ function createFloatingGridBoard() {
     const boardSegments = 6; 
 
     let boardGeom;
-    // Check if the dynamically imported RoundedBoxGeometry is available
-    if (RoundedBoxGeometry) { 
-        boardGeom = new RoundedBoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
-    } else if (typeof THREE.RoundedBoxGeometry === 'function') { // Check if it was loaded globally somehow
+    if (RoundedBoxGeometryInstance) { // Use the imported instance
+        boardGeom = new RoundedBoxGeometryInstance(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
+    } else if (typeof THREE.RoundedBoxGeometry === 'function') { // Fallback if global somehow exists
          boardGeom = new THREE.RoundedBoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE, boardSegments, boardRadius);
     }
     else {
-        console.warn("RoundedBoxGeometry not available, using BoxGeometry as fallback.");
+        console.warn("RoundedBoxGeometry not available, using BoxGeometry.");
         boardGeom = new THREE.BoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE);
     }
     
@@ -208,20 +230,16 @@ function createFloatingGridBoard() {
 function drawBoardGridLines(boardCurrentThickness) {
     const lineThickness = 0.04; 
     const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0 }); 
-    const lineY = 0.015; // Position lines slightly above the board's true top (y=0)
+    const lineY = 0.015; 
     
     const gridLinesGroup = new THREE.Group();
-    // Since boardMesh center is at world Y = -boardThickness/2, its top surface is at Y = 0.
-    // Lines should be at lineY in world space.
-    
+        
     for (let i = 0; i < BOARD_SIZE; i++) {
-        // Horizontal lines (along Z axis)
         const hGeom = new THREE.BoxGeometry(BOARD_SIZE - 0.05, lineThickness, lineThickness);
         const hLine = new THREE.Mesh(hGeom, gridLineMaterial);
         hLine.position.set((BOARD_SIZE -1) / 2, lineY, i); 
         gridLinesGroup.add(hLine);
 
-        // Vertical lines (along X axis)
         const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, BOARD_SIZE - 0.05);
         const vLine = new THREE.Mesh(vGeom, gridLineMaterial);
         vLine.position.set(i, lineY, (BOARD_SIZE -1) / 2);
@@ -236,8 +254,8 @@ function addStoneTo3DScene(x, z, player) {
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
-    const pieceBaseScaleMultiplier = 1.75; // Further increased scale
-    const pieceYOnBoard = 0.85;    // Y for PIECE BASE to sit on board (above grid lines at ~0.015 + lineThickness/2)
+    const pieceBaseScaleMultiplier = 1.35; 
+    const pieceYOnBoard = 0.06;    
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {
@@ -248,18 +266,15 @@ function addStoneTo3DScene(x, z, player) {
         
         if (maxDim === 0) { console.error("Loaded model has zero dimensions:", modelPath); return; }
         
-        const desiredVisualSize = 0.8 * pieceBaseScaleMultiplier;
+        const desiredVisualSize = 0.75 * pieceBaseScaleMultiplier;
         const scaleFactor = desiredVisualSize / maxDim;
         model.scale.set(scaleFactor, scaleFactor, scaleFactor);
         
         const newBox = new THREE.Box3().setFromObject(model);
-        // Shift model so its visual base (min.y of bounding box after scaling) aligns with its local y=0
         model.position.y -= newBox.min.y; 
-                
+        
         const animationStartY = pieceYOnBoard + 2.0; 
-        model.position.set(x, animationStartY, z); // Set world position of model's local origin (now its base)
-
-        console.log(`Piece: ${settings.piece}, Grid(${x},${z}). Model Height After Scale: ${(newBox.max.y - newBox.min.y).toFixed(3)}. Final Scale: ${model.scale.x.toFixed(2)}. Anim Start Y: ${model.position.y.toFixed(2)}, TargetY for base: ${pieceYOnBoard}`);
+        model.position.set(x, animationStartY, z); 
 
         model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true;
             child.material = new THREE.MeshStandardMaterial({
@@ -354,7 +369,7 @@ function onWindowResize() {
 }
 
 // =================================================================
-// Go Game Logic (Unchanged from previous version)
+// Go Game Logic
 // =================================================================
 function getNeighbors(row, col) {
     const neighbors = [];
@@ -423,7 +438,7 @@ function findGroup(startRow, startCol, boardState) {
 }
 
 // =================================================================
-// AI Logic (Unchanged)
+// AI Logic
 // =================================================================
 function getAIMove() { 
     let bestScore = -Infinity; let bestMoves = []; const availableMoves = [];
@@ -468,7 +483,7 @@ function getAIMove() {
 }
 
 // =================================================================
-// Game Flow & UI (Unchanged)
+// Game Flow & UI
 // =================================================================
 function resetGame() {
     if (unsubscribeGameListener) unsubscribeGameListener();
@@ -477,7 +492,7 @@ function resetGame() {
     initializeBoardArray();
     if (scene) Object.values(stoneModels).forEach(model => scene.remove(model));
     stoneModels = {}; updateScoreUI(); turnText.textContent = "";
-    passTurnButton.classList.add('hidden');
+    if (passTurnButton) passTurnButton.classList.add('hidden'); else console.error("Pass turn button not found in resetGame");
 }
 function startNewAIGame() {
     resetGame(); gameMode = 'ai'; 
@@ -488,7 +503,8 @@ function startNewAIGame() {
     player2Settings.color = player1Settings.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
     player2Settings.piece = DEFAULT_PIECE_KEY;
     initThreeJS(); updateStatusText(`Playing vs. AI (${currentDifficulty}).`); updateTurnText();
-    passTurnButton.classList.remove('hidden'); closeModal(gameSetupModal);
+    if (passTurnButton) passTurnButton.classList.remove('hidden');
+    closeModal(gameSetupModal);
 }
 function handlePlayerMove(row, col) { 
     const capturedStones = makeActualMove(row, col, currentPlayer); 
@@ -527,13 +543,18 @@ function endGame() {
     gameOver = true; const winner = determineWinner();
     if (winner === 0) updateStatusText("Game Over - It's a draw!");
     else { const winnerName = (winner === localPlayerNum || (gameMode === 'ai' && winner === 1)) ? "You" : "Opponent"; updateStatusText(`Game Over - ${winnerName} won!`); }
-    turnText.textContent = "Thank you for playing."; passTurnButton.classList.add('hidden');
+    turnText.textContent = "Thank you for playing."; 
+    if (passTurnButton) passTurnButton.classList.add('hidden');
 }
 function determineWinner() { if (captures[1] > captures[2]) return 1; if (captures[2] > captures[1]) return 2; return 0; }
-function updateScoreUI() { player1CapturesText.textContent = captures[1]; player2CapturesText.textContent = captures[2]; }
-function updateStatusText(message) { statusText.textContent = message; }
+function updateScoreUI() { 
+    if(player1CapturesText) player1CapturesText.textContent = captures[1];
+    if(player2CapturesText) player2CapturesText.textContent = captures[2];
+}
+function updateStatusText(message) { if(statusText) statusText.textContent = message; }
 function updateTurnText() {
     if (gameOver) return;
+    if (!turnText) return;
     if (gameMode === 'ai') turnText.textContent = currentPlayer === 1 ? "Your turn (Black)." : "AI's turn (White)...";
     else if (gameMode === 'multiplayer' && activeGameId) turnText.textContent = currentPlayer === localPlayerNum ? "Your turn." : "Opponent's turn.";
 }
@@ -542,7 +563,7 @@ function updateTurnText() {
 // Multiplayer (Firebase)
 // =================================================================
 async function createMultiplayerGame() {
-    if (!auth.currentUser) return;
+    if (!auth || !auth.currentUser) {console.error("Auth not ready for createMultiplayerGame"); return; }
     resetGame(); gameMode = 'multiplayer'; localPlayerNum = 1; gameOver = false;
     player1Settings.uid = auth.currentUser.uid;
     player1Settings.color = playerColorInput.value;
@@ -561,7 +582,7 @@ async function createMultiplayerGame() {
     } catch (error) { console.error("Error creating game:", error); }
 }
 async function joinMultiplayerGame(gameId) {
-    if (!auth.currentUser) return;
+    if (!auth || !auth.currentUser) { console.error("Auth not ready for joinMultiplayerGame"); return;}
     resetGame(); const gameRef = db.collection('games').doc(gameId);
     try {
         const doc = await gameRef.get();
@@ -599,7 +620,9 @@ function listenToGameUpdates(gameId) {
                 gameOver = true; endGame();
                 if (unsubscribeGameListener) unsubscribeGameListener();
             } else {
-                gameOver = false; passTurnButton.classList.remove('hidden'); updateTurnText();
+                gameOver = false; 
+                if(passTurnButton) passTurnButton.classList.remove('hidden'); 
+                updateTurnText();
             }
         }, error => { console.error("Firebase listener error:", error); updateStatusText("Connection error."); });
 }
@@ -613,12 +636,12 @@ function sync3DAndUI(gameData) {
      updateScoreUI();
 }
 async function updateGameInFirebase(dataToUpdate) {
-    if (!activeGameId || !auth.currentUser) return;
+    if (!activeGameId || !auth || !auth.currentUser) return;
     try { await db.collection('games').doc(activeGameId).update(dataToUpdate); }
     catch (error) { console.error("Firebase update error:", error); }
 }
 
 // --- Utility Functions ---
-function openModal(modal) { if (modal) modal.classList.remove('hidden'); }
-function closeModal(modal) { if (modal) modal.classList.add('hidden'); }
+function openModal(modal) { if (modal) modal.classList.remove('hidden'); else console.warn("Attempted to open null modal"); }
+function closeModal(modal) { if (modal) modal.classList.add('hidden'); else console.warn("Attempted to close null modal");}
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => alert("Copied!")); }

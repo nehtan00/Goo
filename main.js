@@ -1,5 +1,5 @@
 // =================================================================
-// Mythos Go - main.js (ReferenceError Fix)
+// Mythos Go - main.js (AI Fix & OrbitControls)
 // =================================================================
 
 // --- Constants ---
@@ -22,7 +22,7 @@ let playerColorInput, playerPieceSelect, difficultySelect;
 let startAiGameButton, createMultGameButton, joinGameCodeInput, joinMultGameButton;
 
 // --- Three.js Variables ---
-let scene, camera, renderer, raycaster, mouse;
+let scene, camera, renderer, raycaster, mouse, controls; // Added 'controls' for OrbitControls
 let boardMesh; 
 let stoneModels = {};
 
@@ -30,7 +30,7 @@ let stoneModels = {};
 let board = [];
 let currentPlayer = 1;
 let gameMode = null;
-let currentDifficulty = 'easy';
+let currentDifficulty = 'easy'; // This global variable will be used by AI
 let gameOver = true;
 let activeGameId = null;
 let localPlayerNum = 0;
@@ -97,8 +97,10 @@ function initEventListeners() {
         if (gameId) joinMultiplayerGame(gameId);
         else alert("Please enter a game code.");
     });
-    document.getElementById('copy-code-button').addEventListener('click', () => copyToClipboard(document.getElementById('share-game-code-display').value));
-    document.getElementById('copy-link-button').addEventListener('click', () => copyToClipboard(document.getElementById('share-game-link-display').value));
+    if(document.getElementById('copy-code-button')) { // Ensure button exists
+        document.getElementById('copy-code-button').addEventListener('click', () => copyToClipboard(document.getElementById('share-game-code-display').value));
+        document.getElementById('copy-link-button').addEventListener('click', () => copyToClipboard(document.getElementById('share-game-link-display').value));
+    }
 }
 
 function waitForAuthAndSetupUI() {
@@ -140,13 +142,23 @@ function initThreeJS() {
 
     camera = new THREE.PerspectiveCamera(45, gameContainer.clientWidth / gameContainer.clientHeight, 0.1, 1000);
     camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.5, BOARD_SIZE * 1.3);
-    camera.lookAt(BOARD_SIZE / 2, -1, BOARD_SIZE / 2);
+    // camera.lookAt(BOARD_SIZE / 2, -1, BOARD_SIZE / 2); // OrbitControls will manage this
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     gameContainer.appendChild(renderer.domElement);
+
+    // Initialize OrbitControls
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2); // Point controls at the center of the board
+    controls.enableDamping = true; // Optional: for smoother control
+    controls.dampingFactor = 0.05;
+    controls.minDistance = BOARD_SIZE / 2; // Don't zoom in too close
+    controls.maxDistance = BOARD_SIZE * 3;  // Don't zoom out too far
+    controls.maxPolarAngle = Math.PI / 2 - 0.1; // Don't let camera go below board
+
 
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x888888, 1.2);
     hemiLight.position.set(0, 20, 0);
@@ -179,15 +191,17 @@ function createMarbleBoard3D() {
     const textureLoader = new THREE.TextureLoader();
     const marbleTexture = textureLoader.load(
         'https://cdn.polyhaven.com/asset_img/primary/marble_01.png?height=1024',
-        () => { renderer.render(scene, camera); },
+        () => { if(renderer) renderer.render(scene, camera); },
         undefined,
         () => {
             console.warn("Failed to load primary marble texture, using fallback.");
             const fallbackTexture = textureLoader.load(FALLBACK_MARBLE_TEXTURE_URL);
             fallbackTexture.wrapS = fallbackTexture.wrapT = THREE.RepeatWrapping;
             fallbackTexture.repeat.set(3, 3);
-            boardMesh.material.map = fallbackTexture;
-            boardMesh.material.needsUpdate = true;
+            if (boardMesh) { // Ensure boardMesh exists
+                boardMesh.material.map = fallbackTexture;
+                boardMesh.material.needsUpdate = true;
+            }
         }
     );
     marbleTexture.wrapS = marbleTexture.wrapT = THREE.RepeatWrapping;
@@ -221,30 +235,30 @@ function drawBoardGridLines() {
 }
 
 function addStoneTo3DScene(x, z, player) {
-    // FIX: Using the correct arguments 'x' and 'z' to create the key.
-    const key = `${x}-${z}`;
+    const key = `${x}-${z}`; // Use x and z as received for the key
     if (stoneModels[key]) return;
 
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
-    const stoneRadius = 0.4;
-    const stoneHeight = 0.6;
+    const stoneRadius = 0.45; // Slightly larger pieces
+    const stoneHeight = 0.3; // Adjust height for a Go stone look
 
     const loader = new THREE.GLTFLoader();
     loader.load(modelPath, gltf => {
         const model = gltf.scene;
-        
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        const desiredSize = stoneRadius * 2;
+        
+        // Aim for pieces to be slightly smaller than 1 grid unit
+        const desiredSize = 0.8; // Almost full grid unit
         model.scale.multiplyScalar(desiredSize / maxDim);
         
         const newBox = new THREE.Box3().setFromObject(model);
         const center = newBox.getCenter(new THREE.Vector3());
         model.position.sub(center);
 
-        model.position.set(x, stoneHeight * 2, z);
+        model.position.set(x, stoneHeight * 2.5, z); // Start higher for animation
 
         model.traverse(child => {
             if (child.isMesh) {
@@ -252,8 +266,8 @@ function addStoneTo3DScene(x, z, player) {
                 child.receiveShadow = true;
                 child.material = new THREE.MeshStandardMaterial({
                     color: settings.color,
-                    roughness: 0.4,
-                    metalness: 0.2
+                    roughness: 0.3, // Less rough for a polished look
+                    metalness: 0.1 // Slightly metallic
                 });
             }
         });
@@ -261,11 +275,11 @@ function addStoneTo3DScene(x, z, player) {
         stoneModels[key] = model;
 
         let currentY = model.position.y;
-        const targetY = stoneHeight / 2;
-        const dropSpeed = 0.2;
+        const targetY = stoneHeight / 2; 
+        const dropSpeed = 0.15; // Slower, smoother drop
         function animateDrop() {
             if (currentY > targetY) {
-                currentY -= dropSpeed;
+                currentY -= dropSpeed * (currentY - targetY + 0.5) ; // Ease out effect
                 model.position.y = Math.max(currentY, targetY);
                 requestAnimationFrame(animateDrop);
             } else {
@@ -276,20 +290,20 @@ function addStoneTo3DScene(x, z, player) {
 
     }, undefined, error => {
         console.error(`Model load error for ${modelPath}:`, error);
-        const geom = new THREE.CylinderGeometry(stoneRadius, stoneRadius, stoneHeight, 32);
-        const mat = new THREE.MeshStandardMaterial({ color: settings.color, roughness: 0.5, metalness: 0.1 });
+        const geom = new THREE.CylinderGeometry(stoneRadius, stoneRadius, stoneHeight, 32); // More like a Go stone
+        const mat = new THREE.MeshStandardMaterial({ color: settings.color, roughness: 0.4, metalness: 0.1 });
         const piece = new THREE.Mesh(geom, mat);
         piece.castShadow = true;
-        piece.position.set(x, stoneHeight * 2, z);
+        piece.position.set(x, stoneHeight * 2.5, z);
         scene.add(piece);
         stoneModels[key] = piece;
 
         let currentY = piece.position.y;
         const targetY = stoneHeight / 2;
-        const dropSpeed = 0.2;
+        const dropSpeed = 0.15;
         function animateDropFallback() {
             if (currentY > targetY) {
-                currentY -= dropSpeed;
+                currentY -= dropSpeed * (currentY - targetY + 0.5) ;
                 piece.position.y = Math.max(currentY, targetY);
                 requestAnimationFrame(animateDropFallback);
             } else {
@@ -301,8 +315,7 @@ function addStoneTo3DScene(x, z, player) {
 }
 
 function removeStoneFrom3DScene(x, z) {
-    // FIX: Using the correct arguments 'x' and 'z' to create the key.
-    const key = `${x}-${z}`;
+    const key = `${x}-${z}`; // Use x and z as received
     if (stoneModels[key]) {
         scene.remove(stoneModels[key]);
         delete stoneModels[key];
@@ -334,6 +347,7 @@ function onBoardClick(event) {
 function animate() {
     if (!renderer) return;
     requestAnimationFrame(animate);
+    if (controls) controls.update(); // Update OrbitControls
     renderer.render(scene, camera);
 }
 
@@ -346,7 +360,7 @@ function onWindowResize() {
 }
 
 // =================================================================
-// Go Game Logic (No changes needed here)
+// Go Game Logic
 // =================================================================
 function initializeBoardArray() { board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0));}
 function placeStone(row, col, player) {
@@ -406,9 +420,9 @@ function getNeighbors(row, col) {
 }
 
 // =================================================================
-// AI Logic (No changes needed)
+// AI Logic
 // =================================================================
-function getAIMove() {
+function getAIMove() { // ** FIX: Uses global currentDifficulty **
     let bestScore = -Infinity; let bestMoves = []; const availableMoves = [];
     for (let r = 0; r < BOARD_SIZE; r++) { for (let c = 0; c < BOARD_SIZE; c++) { if (board[r][c] === 0) availableMoves.push({ r, c }); } }
     if(availableMoves.length === 0) return {pass: true};
@@ -421,7 +435,8 @@ function getAIMove() {
         for (const n of neighbors) { if (board[n.row][n.col] === 1) { const group = findGroup(n.row, n.col, board); if (group.liberties === 2) score += 25; } }
         for (const n of neighbors) { if (board[n.row][n.col] === 2) { const group = findGroup(n.row, n.col, board); if (group.liberties === 1) score += 50; } }
         for (const n of neighbors) { if (board[n.row][n.col] === 2) score += 1; }
-        if (difficulty !== 'easy') { const edgeDist = Math.min(move.r, move.c, BOARD_SIZE - 1 - move.r, BOARD_SIZE - 1 - move.c); if (edgeDist === 0) score += 3;  if (edgeDist <= 2) score += 1;  }
+        // ** FIX: Uses global currentDifficulty **
+        if (currentDifficulty !== 'easy') { const edgeDist = Math.min(move.r, move.c, BOARD_SIZE - 1 - move.r, BOARD_SIZE - 1 - move.c); if (edgeDist === 0) score += 3;  if (edgeDist <= 2) score += 1;  }
         if (score > bestScore) { bestScore = score; bestMoves = [move]; } else if (score === bestScore) bestMoves.push(move);
     }
     board = board.map(r => r.slice()); 
@@ -454,10 +469,10 @@ function handlePlayerMove(row, col) {
     const captured = placeStone(row, col, currentPlayer);
     if (captured !== null) { 
         consecutivePasses = 0;
-        addStoneTo3DScene(col, row, currentPlayer); // Pass col, row for 3D x, z
+        addStoneTo3DScene(col, row, currentPlayer);
         if (captured.length > 0) {
             captures[currentPlayer] += captured.length;
-            captured.forEach(stone => removeStoneFrom3DScene(stone.col, stone.row)); // Pass col, row for 3D x, z
+            captured.forEach(stone => removeStoneFrom3DScene(stone.col, stone.row));
             updateScoreUI();
         }
         currentPlayer = (currentPlayer === 1) ? 2 : 1;

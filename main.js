@@ -204,7 +204,7 @@ function initThreeJS() {
 
 function createFloatingGridBoard() {
     console.log("main.js: createFloatingGridBoard() called.");
-    const boardThickness = 0.4; // Thinner slab for floating effect
+    const boardThickness = 0.8; // Thinner slab for floating effect
     const boardRadius = 0.25; 
     const boardSegments = 5; 
 
@@ -230,8 +230,8 @@ function createFloatingGridBoard() {
     const boardMat = new THREE.MeshStandardMaterial({ 
         map: boardTexture,
         // color: 0x333333, // Fallback color if texture fails, or keep to tint
-        roughness: 0.7,
-        metalness: 0.1,
+        roughness: 0.9,
+        metalness: 0.3,
         // transparent: true, // Make transparent if you want "floating lines only" look
         // opacity: 0.6 
     });
@@ -245,8 +245,8 @@ function createFloatingGridBoard() {
 }
 
 function drawBoardGridLines() {
-    const lineThickness = 0.045; // **THICKER GRID LINES**
-    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.8, metalness: 0.0 }); 
+    const lineThickness = 0.065; // **THICKER GRID LINES**
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.2, metalness: 0.7 }); 
     const lineY = 0.01; // Position lines on top surface of the board (which is at y=0)
     
     const gridLinesGroup = new THREE.Group();
@@ -278,8 +278,8 @@ function addStoneTo3DScene(x, z, player) {
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
-    const pieceBaseScaleMultiplier = 1.6; // **AGGRESSIVELY LARGER PIECES**
-    const pieceYOnBoard = 0.85;    // **FINAL Y for piece base, clearly on top of grid lines**
+    const pieceBaseScaleMultiplier = 1.3; // **AGGRESSIVELY LARGER PIECES**
+    const pieceYOnBoard = 0.55;    // **FINAL Y for piece base, clearly on top of grid lines**
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {

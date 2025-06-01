@@ -149,7 +149,8 @@ function checkUrlForGameToJoin() { /* ... unchanged ... */
 // =================================================================
 // 3D Scene
 // =================================================================
-function initThreeJS() { /* ... Lighting and Renderer setup unchanged ... */
+
+function initThreeJS() {
     console.log("main.js: initThreeJS() CALLED.");
     if (!gameContainer) { console.error("main.js: gameContainer not found for Three.js."); return; }
     gameContainer.innerHTML = ''; stoneModels = {};
@@ -160,20 +161,43 @@ function initThreeJS() { /* ... Lighting and Renderer setup unchanged ... */
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.9; 
+    renderer.toneMappingExposure = 0.4; // Your current exposure setting
     renderer.outputEncoding = THREE.sRGBEncoding;
     gameContainer.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement); 
     controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2); controls.enableDamping = true;
     controls.dampingFactor = 0.05; controls.minDistance = BOARD_SIZE * 0.7; controls.maxDistance = BOARD_SIZE * 2.5;
     controls.maxPolarAngle = Math.PI / 2 - 0.02; 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0); 
-    hemiLight.position.set(0, 20, 0); scene.add(hemiLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);  
-    dirLight.position.set(10, 15, 12); dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; scene.add(dirLight);
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.4); 
-    fillLight.position.set(-10, 10, -5); scene.add(fillLight);
+    
+    // Your Candlelight Color Setup
+    const candlelight = 0xffd580; 
+    const groundColor = 0x402808; 
+    const hemiLight = new THREE.HemisphereLight(candlelight, groundColor, 0.8); 
+    hemiLight.position.set(0, 20, 0); 
+    scene.add(hemiLight);
+    
+    const dirLight = new THREE.DirectionalLight(candlelight, 0.7); 
+    dirLight.position.set(10, 15, 12); 
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048; 
+    dirLight.shadow.mapSize.height = 2048; 
+
+    // ** NEW: Shadow Camera properties for dirLight to expand "beam" **
+    const shadowCamSize = BOARD_SIZE * 1.5; // Adjust this multiplier to change beam size (e.g., 1.5, 2.0, 2.5)
+    dirLight.shadow.camera.near = 0.5;    
+    dirLight.shadow.camera.far = 50;      
+    dirLight.shadow.camera.left = -shadowCamSize / 2;
+    dirLight.shadow.camera.right = shadowCamSize / 2;
+    dirLight.shadow.camera.top = shadowCamSize / 2;
+    dirLight.shadow.camera.bottom = -shadowCamSize / 2;
+    // dirLight.shadow.camera.updateProjectionMatrix(); // Usually not needed if set before first render
+
+    scene.add(dirLight);
+
+    const fillLight = new THREE.DirectionalLight(candlelight, 0.3); 
+    fillLight.position.set(-10, 10, -5);
+    scene.add(fillLight);
+    
     createFloatingGridBoard(); 
     raycaster = new THREE.Raycaster(); mouse = new THREE.Vector2();
     if (gameContainer) gameContainer.addEventListener('click', onBoardClick, false);

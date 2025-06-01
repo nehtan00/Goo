@@ -1,20 +1,20 @@
 /* =================================================================
-// Mythos Go - style.css (Marble Backgrounds & Buttons)
+// Mythos Go - style.css (Updated Logo & Engraved Button Style)
 // ================================================================= */
 
 /* --- Global Styles & Font --- */
 :root {
     --primary-font: 'Cinzel', serif;
-    --button-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    --text-color: #333; /* Darker text for better readability on lighter marble */
+    --button-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Using a clean sans-serif for buttons */
+    --text-color: #3a322b; /* Dark brown for main text, good on light marble */
     
-    /* ** UPDATE THESE PATHS TO YOUR ACTUAL TEXTURE FILES IN 'assets/' ** */
-    --page-marble-texture: url('assets/wall.jpg'); /* For the overall page background */
-    --button-dark-marble-texture: url('assets/dark_marble.jpg'); /* For button backgrounds */
+    /* ** ENSURE THIS PATH IS CORRECT for your desired page background marble ** */
+    --page-marble-texture: url('assets/light_marble_wall_texture.jpg'); 
     
-    --page-background-fallback: #e8e0d0; /* A warm, light parchment/stone fallback */
-    --button-dark-fallback: #3a3a3a; /* Dark grey fallback for buttons if texture fails */
-    --border-color: #4a3b32; /* A darker brown for borders, suiting marble */
+    --page-background-fallback: #f5f0e8; /* Light parchment/marble fallback */
+    --button-text-color: #403020; /* Dark rich brown for button text */
+    --button-hover-text-color: #201810; /* Darker brown for hover */
+    --border-color: #5a4a3a; /* Darker brown for subtle borders */
 }
 
 html, body {
@@ -24,7 +24,7 @@ html, body {
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    font-family: 'Georgia', serif; /* More classic default font */
     background-image: var(--page-marble-texture);
     background-color: var(--page-background-fallback); 
     background-size: cover; 
@@ -39,10 +39,10 @@ body {
 
 /* --- Header --- */
 header {
-    background-color: rgba(245, 245, 245, 0.8); /* Slightly off-white, semi-transparent */
-    padding: 15px 30px;
-    border-bottom: 2px solid var(--border-color);
-    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    background-color: rgba(255, 255, 255, 0.75); /* Semi-transparent white */
+    padding: 10px 25px; /* Adjusted padding */
+    border-bottom: 1px solid rgba(80, 60, 40, 0.2); /* Softer brown border */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -55,22 +55,21 @@ header {
 .logo-container {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 12px; /* Adjusted gap */
 }
 
-/* ** STYLE FOR YOUR CUSTOM LOGO IMAGE ** */
 .custom-logo-img { 
-    width: 15px;  /* Adjust width as needed */
-    height: 15px; /* Adjust height as needed, or use 'auto' for one dimension */
-    object-fit: contain; /* Ensures image fits without distortion */
-    border-radius: 4px; /* Optional: slightly rounded corners for the logo */
+    width: 40px;  /* **LOGO SIZE ADJUSTED** */
+    height: 40px; /* **LOGO SIZE ADJUSTED** */
+    object-fit: contain; 
+    border-radius: 3px; 
 }
 
 header h1 {
     font-family: var(--primary-font);
-    font-size: 1.8em; 
+    font-size: 1.6em; /* Adjusted size */
     font-weight: 700;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     margin: 0;
     color: var(--border-color);
@@ -79,7 +78,7 @@ header h1 {
 /* --- Main Content & Game Area --- */
 main {
     flex-grow: 1;
-    padding: 25px; 
+    padding: 20px; 
     display: flex;
     flex-direction: column;
     align-items: center; 
@@ -91,17 +90,18 @@ main {
 #game-container {
     width: 90vw;
     height: 90vw; 
-    max-width: 580px; 
-    max-height: 580px;
-    margin: 25px auto; 
-    border-radius: 10px; 
+    max-width: 560px; /* Max size for the container */
+    max-height: 560px;
+    margin: 20px auto; 
+    border-radius: 8px; 
+    
+    background-color: rgba(0,0,0,0.03); /* Very subtle dark base for carved area */
     box-shadow: 
-        inset 0 0 12px rgba(0,0,0,0.4), 
-        0 6px 18px rgba(0,0,0,0.15);   
+        inset 2px 2px 5px rgba(0,0,0,0.3),     /* Darker shadow top/left */
+        inset -1px -1px 4px rgba(255,255,255,0.15); /* Lighter highlight bottom/right */
     cursor: pointer;
-    background-color: #404040; /* Darker fallback if 3D scene transparent */
     overflow: hidden; 
-    border: 2px solid #504030; /* Dark brown border */
+    border: 1px solid rgba(0,0,0,0.15); 
     padding: 6px; 
     box-sizing: border-box;
 }
@@ -110,11 +110,11 @@ main {
     text-align: center;
     margin-top: 20px;
     width: 100%;
-    max-width: 580px; 
-    background-color: rgba(255,255,255,0.75); 
-    padding: 12px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    max-width: 560px; 
+    background-color: rgba(255,255,255,0.7); 
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
 
 #score-board {
@@ -122,53 +122,54 @@ main {
     justify-content: space-around; 
     gap: 20px;
     font-family: var(--primary-font);
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: #3a3a3a;
+    font-weight: 600; /* Slightly less bold */
+    margin-bottom: 8px;
+    color: #4a3b32; /* Dark brown */
 }
 
 #status-text {
     font-family: var(--primary-font);
     font-weight: 700;
-    font-size: 1.2rem;
-    margin-top: 10px;
-    color: #2c2c2c;
+    font-size: 1.15rem;
+    margin-top: 8px;
+    color: #3a2a1a; /* Darker brown */
 }
 
 #turn-text {
-    font-size: 1rem;
+    font-size: 0.95rem;
     min-height: 1.2em; 
-    color: #4a4a4a;
+    color: #5a4a3a;
 }
 
-/* --- BUTTONS WITH DARK MARBLE TEXTURE --- */
+/* --- NEW "ENGRAVED/RELIEF" BUTTON STYLES --- */
 button,
 header nav button, 
 #action-buttons button, 
-.modal-content button,
+.modal-content button, /* Primary buttons in modals might need different styling later */
 .share-input-group button {
     font-family: var(--button-font);
     font-weight: 600; 
-    font-size: 0.95rem; 
-    text-transform: none; 
+    font-size: 0.9rem; 
+    text-transform: uppercase; /* For a more formal/engraved feel */
+    letter-spacing: 0.8px;
     
-    background-image: var(--button-dark-marble-texture);
-    background-color: var(--button-dark-fallback); /* Fallback if texture fails */
-    background-size: cover; /* Ensure texture covers the button */
-    background-position: center center;
+    background-color: transparent; /* No background color */
+    /* background-color: rgba(255, 255, 255, 0.05); Optional: very faint transparent overlay */
 
-    border: 1px solid rgba(0,0,0,0.5); /* Dark border to define edge */
-    color: white; /* White text for contrast on dark marble */
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.7); /* Shadow for text readability */
+    border: 1px solid transparent; /* No visible border, but keeps layout consistent */
+    color: var(--button-text-color); 
+    
+    /* Subtle text shadow to make text "pop" or look slightly pressed */
+    text-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.2); 
+    /* For a lighter "glow" if on dark buttons: text-shadow: 0 0 2px rgba(255,255,255,0.3); */
 
-    padding: 10px 25px; 
-    margin: 8px; 
+    padding: 9px 18px; 
+    margin: 6px; 
     cursor: pointer;
-    border-radius: 25px; 
-    box-shadow: 0 3px 8px rgba(0,0,0,0.25), inset 0 1px 1px rgba(255,255,255,0.2); /* Outer shadow and subtle inner highlight */
-    transition: all 0.2s ease-out;
+    border-radius: 0; /* Sharp corners */
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.1); /* Very subtle drop shadow for affordance */
+    transition: all 0.15s ease-in-out;
     outline: none;
-    letter-spacing: 0.5px;
     display: inline-block; 
     text-align: center;
     width: auto; 
@@ -179,9 +180,11 @@ header nav button:hover,
 #action-buttons button:hover, 
 .modal-content button:hover,
 .share-input-group button:hover {
-    box-shadow: 0 5px 12px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);
-    transform: translateY(-2px);
-    filter: brightness(1.1); /* Slightly brighten texture on hover */
+    color: var(--button-hover-text-color);
+    background-color: rgba(0,0,0,0.03); /* Very faint background on hover */
+    /* text-shadow: 0.5px 0.5px 1.5px rgba(0,0,0,0.3); */
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
 }
 
 button:active,
@@ -189,55 +192,87 @@ header nav button:active,
 #action-buttons button:active, 
 .modal-content button:active,
 .share-input-group button:active {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2), inset 0 1px 1px rgba(0,0,0,0.1);
-    transform: translateY(0px);
-    filter: brightness(0.9); /* Slightly darken texture on active */
+    color: #000; /* Darkest text on active */
+    background-color: rgba(0,0,0,0.05);
+    /* text-shadow: 0.5px 0.5px 0.5px rgba(0,0,0,0.4); */
+    box-shadow: inset 1px 1px 2px rgba(0,0,0,0.1);
+    transform: translateY(0.5px);
 }
 
-/* Specific button overrides */
+/* Header nav button specific adjustments if needed */
 header nav button {
-    padding: 8px 20px; 
-    font-size: 0.9rem;
+    padding: 7px 15px;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    color: #504030; /* Slightly lighter than other buttons for subtlety */
+}
+header nav button:hover {
+    color: #000;
 }
 
-.modal-content > button { 
+
+/* Modal buttons might need to look more prominent - keeping previous style for them for now */
+.modal-content > button { /* Direct children buttons in modal-content (like Start AI Game) */
     width: 100%; 
     box-sizing: border-box;
     margin-top: 15px;
+    padding: 12px 20px; /* Restore more substantial padding */
+    background-image: linear-gradient(to bottom, #555, #333); /* Dark gradient for modals */
+    color: white;
+    border: 1px solid #222;
+    border-radius: 5px; /* Slightly rounded for modal context */
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
+.modal-content > button:hover {
+    background-image: linear-gradient(to bottom, #666, #444);
+    filter: none; /* Remove brightness filter from general buttons */
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+}
+.modal-content > button:active {
+    background-image: linear-gradient(to bottom, #444, #222);
+    transform: translateY(0px);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+}
+
+
+/* Share input group buttons also can keep a more distinct style or inherit new minimal one */
 .share-input-group button {
     width: auto;
     flex-shrink: 0; 
+    padding: 9px 15px; /* Match other minimal buttons */
+    /* If you want them to use the new style, remove specific background/border here */
 }
 
 
 /* --- Footer --- */
 footer {
-    background-color: rgba(245, 245, 245, 0.7); 
+    background-color: rgba(245, 245, 245, 0.6); 
     color: #555;
     text-align: center;
     padding: 15px;
-    border-top: 1px solid rgba(0,0,0,0.1); 
+    border-top: 1px solid rgba(80, 60, 40, 0.15); 
     font-size: 0.8em;
     letter-spacing: 0.5px;
     flex-shrink: 0; 
 }
 
 /* --- Modal Styles --- */
-.modal-overlay {position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 20px; box-sizing: border-box;}
+.modal-overlay {position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 20px; box-sizing: border-box;}
 .modal-overlay:not(.hidden) {opacity: 1; pointer-events: auto;}
-.modal-content {background-color: #fdfdfd; padding: 30px; border: 1px solid #ccc; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); width: 100%; max-width: 500px; position: relative; text-align: left; max-height: 90vh; overflow-y: auto; border-radius: 10px;}
+.modal-content {background-color: #fefefe; padding: 30px; border: 1px solid #bbb; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2); width: 100%; max-width: 500px; position: relative; text-align: left; max-height: 90vh; overflow-y: auto; border-radius: 8px;}
 .modal-content.modal-large {max-width: 800px; }
-.modal-content h2 {font-family: var(--primary-font); text-align: center; margin-top: 0; margin-bottom: 25px; text-transform: uppercase; color: var(--text-color); border-bottom: 1px solid #eee; padding-bottom: 10px;}
+.modal-content h2 {font-family: var(--primary-font); text-align: center; margin-top: 0; margin-bottom: 25px; text-transform: uppercase; color: var(--text-color); border-bottom: 1px solid #ddd; padding-bottom: 10px;}
 .close-button { position: absolute; top: 10px; right: 15px; font-size: 2.5rem; font-weight: bold; color: #aaa; background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; line-height: 1; cursor: pointer; transform: none !important;}
 .close-button:hover { color: var(--border-color) !important; background: none !important; transform: none !important; box-shadow: none !important;}
-.setup-section, .rules-section, .strategy-section {border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;}
+.setup-section, .rules-section, .strategy-section {border-top: 1px solid #e0e0e0; padding-top: 20px; margin-top: 20px;}
 .setup-section:first-of-type, .rules-section:first-of-type { border-top: none; }
 .modal-content label {display: block; margin-bottom: 8px; font-weight: bold; color: #555;}
-.modal-content input[type="text"], .modal-content select {width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;}
-.modal-content input[type="text"]:focus, .modal-content select:focus {border-color: #888; box-shadow: 0 0 5px rgba(0,0,0,0.1);}
-.modal-content input[type="color"] {width: 50px; height: 50px; padding: 0; border: 1px solid #ddd; vertical-align: middle; border-radius: 4px;}
-#rules-strategy-modal h3 {font-family: var(--primary-font); font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+.modal-content input[type="text"], .modal-content select {width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem;}
+.modal-content input[type="text"]:focus, .modal-content select:focus {border-color: #777; box-shadow: 0 0 5px rgba(0,0,0,0.1);}
+.modal-content input[type="color"] {width: 50px; height: 50px; padding: 0; border: 1px solid #ccc; vertical-align: middle; border-radius: 4px;}
+#rules-strategy-modal h3 {font-family: var(--primary-font); font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 5px;}
 #rules-strategy-modal ul, #rules-strategy-modal ol {padding-left: 25px;}
 #rules-strategy-modal li {margin-bottom: 15px;}
 #rules-strategy-modal li p {margin-top: 5px; font-size: 0.95em; color: #555;}

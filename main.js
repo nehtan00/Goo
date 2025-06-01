@@ -163,7 +163,7 @@ function initThreeJS() {
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.4; // Your current exposure setting
+    renderer.toneMappingExposure = 0.9; // Your current exposure setting
     renderer.outputEncoding = THREE.sRGBEncoding;
     gameContainer.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement); 

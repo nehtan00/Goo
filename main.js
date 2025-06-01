@@ -1,5 +1,5 @@
 // =================================================================
-// Mythos Go - main.js (Visual & Bugfix Overhaul)
+// Mythos Go - main.js (Visual & Animation Overhaul)
 // =================================================================
 
 // --- Constants ---
@@ -11,11 +11,15 @@ const PIECE_MODEL_PATHS = {
     'Aztec': 'assets/aztec.glb'
 };
 const DEFAULT_PIECE_KEY = 'Achilles';
-// Marble texture for the board. Found a free, high-quality one.
-const MARBLE_TEXTURE_URL = 'https://www.transparenttextures.com/patterns/marble-white.png';
+// Using a more detailed marble texture. You can replace this with any tileable texture URL.
+const MARBLE_TEXTURE_URL = 'https://cc0textures.com/get?file=Marble015_1K-JPG.zip&type=JPG&map=Color'; // Example texture
+// Note: The above URL links to a ZIP. You'd need to extract the JPG and host it,
+// or find a direct JPG link. For simplicity, let's use a placeholder or a direct image link if possible.
+// Placeholder texture if the above fails:
+const FALLBACK_MARBLE_TEXTURE_URL = 'https://www.transparenttextures.com/patterns/getSubtleHex2.png';
+
 
 // --- Global DOM Element Variables ---
-// Declared globally, but assigned after the DOM is loaded.
 let gameContainer, statusText, turnText, player1CapturesText, player2CapturesText;
 let newGameButton, joinGameButton, passTurnButton, rulesStrategyButton;
 let gameSetupModal, joinGameModal, shareGameModal, rulesStrategyModal;
@@ -24,7 +28,7 @@ let startAiGameButton, createMultGameButton, joinGameCodeInput, joinMultGameButt
 
 // --- Three.js Variables ---
 let scene, camera, renderer, raycaster, mouse;
-let boardMesh; // The 3D marble slab for the board
+let boardMesh; 
 let stoneModels = {};
 
 // --- Game State Variables ---
@@ -43,11 +47,10 @@ let koState = null;
 let player1Settings = { uid: null, color: '#222222', piece: DEFAULT_PIECE_KEY };
 let player2Settings = { uid: null, color: '#FFFFFF', piece: DEFAULT_PIECE_KEY };
 
+
 // =================================================================
 // Initial Setup
 // =================================================================
-
-// Main entry point: waits for the HTML to be ready before doing anything.
 document.addEventListener('DOMContentLoaded', () => {
     assignDOMElements();
     initEventListeners();
@@ -55,8 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', onWindowResize, false);
 });
 
-// **FIX:** Assigns all DOM variables in one place, after the page has loaded.
-// This prevents "Cannot read properties of null" errors.
 function assignDOMElements() {
     gameContainer = document.getElementById('game-container');
     statusText = document.getElementById('status-text');
@@ -80,19 +81,20 @@ function assignDOMElements() {
     joinMultGameButton = document.getElementById('join-mult-game-button');
 }
 
-// **FIX:** Attaches all event listeners in one place.
 function initEventListeners() {
     newGameButton.addEventListener('click', () => openModal(gameSetupModal));
     joinGameButton.addEventListener('click', () => openModal(joinGameModal));
     rulesStrategyButton.addEventListener('click', () => openModal(rulesStrategyModal));
     passTurnButton.addEventListener('click', handlePassTurn);
-
-    // Add listeners for all close buttons
     document.querySelectorAll('.close-button').forEach(button => {
         const modalId = button.getAttribute('data-modal-id');
-        button.addEventListener('click', () => closeModal(document.getElementById(modalId)));
+        const modalToClose = document.getElementById(modalId);
+        if (modalToClose) { // Ensure modal exists before adding listener
+             button.addEventListener('click', () => closeModal(modalToClose));
+        } else {
+            console.warn("Could not find modal for close button:", modalId);
+        }
     });
-
     startAiGameButton.addEventListener('click', startNewAIGame);
     createMultGameButton.addEventListener('click', createMultiplayerGame);
     joinMultGameButton.addEventListener('click', () => {
@@ -100,8 +102,6 @@ function initEventListeners() {
         if (gameId) joinMultiplayerGame(gameId);
         else alert("Please enter a game code.");
     });
-
-    // Share buttons
     document.getElementById('copy-code-button').addEventListener('click', () => copyToClipboard(document.getElementById('share-game-code-display').value));
     document.getElementById('copy-link-button').addEventListener('click', () => copyToClipboard(document.getElementById('share-game-link-display').value));
 }
@@ -125,7 +125,7 @@ function waitForAuthAndSetupUI() {
 function checkUrlForGameToJoin() {
     const urlParams = new URLSearchParams(window.location.search);
     const gameIdFromUrl = urlParams.get('game');
-    if (gameIdFromUrl) {
+    if (gameIdFromUrl && gameSetupModal) { // Ensure modals are assigned
         joinGameCodeInput.value = gameIdFromUrl;
         openModal(joinGameModal);
         statusText.textContent = `Attempting to join game: ${gameIdFromUrl}`;
@@ -141,27 +141,44 @@ function initThreeJS() {
     stoneModels = {};
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf0f0f0);
+    scene.background = new THREE.Color(0xdddddd); // Lighter background for contrast
 
-    camera = new THREE.PerspectiveCamera(50, gameContainer.clientWidth / gameContainer.clientHeight, 0.1, 1000);
-    // **VISUAL FIX:** Better camera angle for a more 3D feel.
-    camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.2, BOARD_SIZE * 1.2);
-    camera.lookAt(BOARD_SIZE / 2, 0, BOARD_SIZE / 2);
+    camera = new THREE.PerspectiveCamera(45, gameContainer.clientWidth / gameContainer.clientHeight, 0.1, 1000);
+    camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.5, BOARD_SIZE * 1.3);
+    camera.lookAt(BOARD_SIZE / 2, -1, BOARD_SIZE / 2); // Look slightly down onto the board
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
-    renderer.shadowMap.enabled = true; // Enable shadows
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
     gameContainer.appendChild(renderer.domElement);
 
-    // **VISUAL FIX:** Improved lighting for better depth and realism.
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.0)); // Soft ambient light
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    dirLight.position.set(10, 15, 8);
-    dirLight.castShadow = true;
-    scene.add(dirLight);
+    // Enhanced Lighting
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x888888, 1.2); // Softer overall light
+    hemiLight.position.set(0, 20, 0);
+    scene.add(hemiLight);
 
-    createMarbleBoard();
-    drawBoardGrid();
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0); // Main sunlight
+    dirLight.position.set(15, 20, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 50;
+    dirLight.shadow.camera.left = -BOARD_SIZE;
+    dirLight.shadow.camera.right = BOARD_SIZE;
+    dirLight.shadow.camera.top = BOARD_SIZE;
+    dirLight.shadow.camera.bottom = -BOARD_SIZE;
+    scene.add(dirLight);
+    
+    // Optional: Point light for highlights
+    // const pointLight = new THREE.PointLight(0xffffff, 0.5, 100);
+    // pointLight.position.set(-10, 10, -10);
+    // scene.add(pointLight);
+
+
+    createMarbleBoard3D();
+    drawBoardGridLines(); // Separate function for lines
 
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
@@ -170,93 +187,157 @@ function initThreeJS() {
     animate();
 }
 
-// **VISUAL FIX:** Create a 3D board slab with a marble texture.
-function createMarbleBoard() {
+function createMarbleBoard3D() {
     const textureLoader = new THREE.TextureLoader();
-    const marbleTexture = textureLoader.load(MARBLE_TEXTURE_URL);
+    // Using a direct link to a seamless marble texture for demonstration.
+    // It's better to download and host your own textures.
+    const marbleTexture = textureLoader.load(
+        'https://cdn.polyhaven.com/asset_img/primary/marble_01.png?height=1024', // Example direct link
+        () => { renderer.render(scene, camera); }, // Render once texture loads
+        undefined,
+        () => { // Fallback if texture fails
+            console.warn("Failed to load primary marble texture, using fallback.");
+            const fallbackTexture = textureLoader.load(FALLBACK_MARBLE_TEXTURE_URL);
+            fallbackTexture.wrapS = fallbackTexture.wrapT = THREE.RepeatWrapping;
+            fallbackTexture.repeat.set(3, 3);
+            boardMesh.material.map = fallbackTexture;
+            boardMesh.material.needsUpdate = true;
+        }
+    );
     marbleTexture.wrapS = marbleTexture.wrapT = THREE.RepeatWrapping;
-    marbleTexture.repeat.set(4, 4);
+    marbleTexture.repeat.set(2, 2); // Adjust tiling as needed
 
-    const boardGeom = new THREE.BoxGeometry(BOARD_SIZE, 0.5, BOARD_SIZE);
+    const boardThickness = 0.8; // Make the board thicker
+    const boardGeom = new THREE.BoxGeometry(BOARD_SIZE, boardThickness, BOARD_SIZE);
     const boardMat = new THREE.MeshStandardMaterial({ 
         map: marbleTexture,
-        roughness: 0.8,
-        metalness: 0.2
+        roughness: 0.6, 
+        metalness: 0.1 
     });
     boardMesh = new THREE.Mesh(boardGeom, boardMat);
-    boardMesh.position.set((BOARD_SIZE - 1) / 2, -0.25, (BOARD_SIZE - 1) / 2);
+    // Position so top surface is at y=0
+    boardMesh.position.set((BOARD_SIZE - 1) / 2, -boardThickness / 2, (BOARD_SIZE - 1) / 2);
     boardMesh.receiveShadow = true;
     scene.add(boardMesh);
 }
 
-function drawBoardGrid() {
-    const material = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.5 });
-    const lineY = 0.01; // Position lines slightly above the board surface
+function drawBoardGridLines() {
+    const material = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 });
+    const lineY = 0.01; // Slightly above the board surface (top of marble slab)
+    
     for (let i = 0; i < BOARD_SIZE; i++) {
-        // Horizontal lines
         let pointsH = [new THREE.Vector3(0, lineY, i), new THREE.Vector3(BOARD_SIZE - 1, lineY, i)];
         let geomH = new THREE.BufferGeometry().setFromPoints(pointsH);
         scene.add(new THREE.Line(geomH, material));
         
-        // Vertical lines
         let pointsV = [new THREE.Vector3(i, lineY, 0), new THREE.Vector3(i, lineY, BOARD_SIZE - 1)];
         let geomV = new THREE.BufferGeometry().setFromPoints(pointsV);
         scene.add(new THREE.Line(geomV, material));
     }
 }
 
-// **FIX:** More robust model loading and scaling.
 function addStoneTo3DScene(x, z, player) {
-    const key = `${x}-${z}`;
+    const key = `${col}-${row}`; // Using col, row as per board array
     if (stoneModels[key]) return;
 
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
-    
+    const stoneRadius = 0.4; // For consistent size
+    const stoneHeight = 0.6; // Make pieces taller
+
     const loader = new THREE.GLTFLoader();
     loader.load(modelPath, gltf => {
         const model = gltf.scene;
-        // Center and scale the model correctly after loading
+        
+        // Calculate bounding box and scale to desired size
         const box = new THREE.Box3().setFromObject(model);
-        const center = box.getCenter(new THREE.Vector3());
-        model.position.sub(center); // Center the model's geometry
-        model.scale.set(0.4, 0.4, 0.4); // Uniform scale
-        model.position.set(x, 0.25, z); // Place on the board
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const desiredSize = stoneRadius * 2; // Diameter
+        model.scale.multiplyScalar(desiredSize / maxDim);
+        
+        // Recenter model after scaling
+        const newBox = new THREE.Box3().setFromObject(model);
+        const center = newBox.getCenter(new THREE.Vector3());
+        model.position.sub(center);
+
+        // Start position for animation (above the board)
+        model.position.set(x, stoneHeight * 2, z); // x, z are grid coordinates here
 
         model.traverse(child => {
             if (child.isMesh) {
                 child.castShadow = true;
-                child.material = child.material.clone();
-                child.material.color.set(settings.color);
+                child.receiveShadow = true; // Stones can receive shadows too
+                child.material = new THREE.MeshStandardMaterial({ // Force standard material for consistent lighting
+                    color: settings.color,
+                    roughness: 0.4,
+                    metalness: 0.2
+                });
             }
         });
         scene.add(model);
         stoneModels[key] = model;
+
+        // Placement Animation
+        let currentY = model.position.y;
+        const targetY = stoneHeight / 2; // Final Y position on board
+        const dropSpeed = 0.2;
+
+        function animateDrop() {
+            if (currentY > targetY) {
+                currentY -= dropSpeed;
+                model.position.y = Math.max(currentY, targetY);
+                requestAnimationFrame(animateDrop);
+            } else {
+                model.position.y = targetY;
+            }
+        }
+        animateDrop();
+
     }, undefined, error => {
         console.error(`Model load error for ${modelPath}:`, error);
-        // Better looking fallback sphere
-        const geom = new THREE.SphereGeometry(0.45, 32, 16);
+        const geom = new THREE.CylinderGeometry(stoneRadius, stoneRadius, stoneHeight, 32);
         const mat = new THREE.MeshStandardMaterial({ color: settings.color, roughness: 0.5, metalness: 0.1 });
-        const sphere = new THREE.Mesh(geom, mat);
-        sphere.castShadow = true;
-        sphere.position.set(x, 0.45, z);
-        scene.add(sphere);
-        stoneModels[key] = sphere;
+        const piece = new THREE.Mesh(geom, mat);
+        piece.castShadow = true;
+        piece.position.set(x, stoneHeight * 2, z);
+        scene.add(piece);
+        stoneModels[key] = piece;
+
+        // Animation for fallback
+        let currentY = piece.position.y;
+        const targetY = stoneHeight / 2;
+        const dropSpeed = 0.2;
+        function animateDropFallback() {
+            if (currentY > targetY) {
+                currentY -= dropSpeed;
+                piece.position.y = Math.max(currentY, targetY);
+                requestAnimationFrame(animateDropFallback);
+            } else {
+                piece.position.y = targetY;
+            }
+        }
+        animateDropFallback();
     });
 }
 
 function removeStoneFrom3DScene(x, z) {
-    const key = `${x}-${z}`;
+    const key = `${col}-${row}`; // Using col, row as per board array
     if (stoneModels[key]) {
         scene.remove(stoneModels[key]);
+        // Dispose of geometry and material if necessary, for larger scenes
+        // stoneModels[key].traverse(child => {
+        //     if (child.isMesh) {
+        //         child.geometry.dispose();
+        //         child.material.dispose();
+        //     }
+        // });
         delete stoneModels[key];
     }
 }
 
 function onBoardClick(event) {
     if (gameOver || (gameMode === 'multiplayer' && currentPlayer !== localPlayerNum)) return;
-
-    // Use boardMesh for raycasting for better accuracy on a 3D surface
     if (!boardMesh) return; 
 
     const rect = renderer.domElement.getBoundingClientRect();
@@ -268,13 +349,14 @@ function onBoardClick(event) {
 
     if (intersects.length > 0) {
         const point = intersects[0].point;
-        // Adjust for the board's centered position
-        const boardOriginOffset = (BOARD_SIZE - 1) / 2;
-        const x = Math.round(point.x + boardOriginOffset);
-        const z = Math.round(point.z + boardOriginOffset);
+        // The boardMesh center is at ((BOARD_SIZE-1)/2, -thickness/2, (BOARD_SIZE-1)/2)
+        // The top surface of the boardMesh is at y=0.
+        // We need to map the click point (which is on the top surface) to grid coordinates.
+        const col = Math.round(point.x); 
+        const row = Math.round(point.z); 
         
-        if (x >= 0 && x < BOARD_SIZE && z >= 0 && z < BOARD_SIZE) {
-            handlePlayerMove(z, x); // Go boards are (row, col) -> (z, x)
+        if (col >= 0 && col < BOARD_SIZE && row >= 0 && row < BOARD_SIZE) {
+            handlePlayerMove(row, col); 
         }
     }
 }
@@ -286,7 +368,7 @@ function animate() {
 }
 
 function onWindowResize() {
-    if (camera && renderer) {
+    if (camera && renderer && gameContainer) {
         camera.aspect = gameContainer.clientWidth / gameContainer.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
@@ -294,13 +376,9 @@ function onWindowResize() {
 }
 
 // =================================================================
-// Go Game Logic (No changes needed here)
+// Go Game Logic (No changes needed here, using col, row from board array consistently)
 // =================================================================
-
-function initializeBoardArray() {
-    board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0));
-}
-
+function initializeBoardArray() { board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0));}
 function placeStone(row, col, player) {
     if (board[row][col] !== 0) return null; 
     let tempBoard = board.map(r => r.slice());
@@ -311,9 +389,7 @@ function placeStone(row, col, player) {
     for (const n of neighbors) {
         if (tempBoard[n.row][n.col] === opponent) {
             const group = findGroup(n.row, n.col, tempBoard);
-            if (group.liberties === 0) {
-                capturedStones.push(...group.stones);
-            }
+            if (group.liberties === 0) capturedStones.push(...group.stones);
         }
     }
     capturedStones.forEach(stone => tempBoard[stone.row][stone.col] = 0);
@@ -321,15 +397,11 @@ function placeStone(row, col, player) {
     if (ownGroup.liberties === 0) return null; 
     const boardString = tempBoard.map(r => r.join('')).join('');
     if (boardString === koState) return null; 
-    if (capturedStones.length > 0) {
-        koState = board.map(r => r.join('')).join(''); 
-    } else {
-        koState = null;
-    }
+    if (capturedStones.length > 0) koState = board.map(r => r.join('')).join(''); 
+    else koState = null;
     board = tempBoard;
     return capturedStones;
 }
-
 function findGroup(startRow, startCol, boardState) {
     const player = boardState[startRow][startCol];
     if (player === 0) return { stones: [], liberties: 0 };
@@ -345,9 +417,8 @@ function findGroup(startRow, startCol, boardState) {
             const key = `${n.row},${n.col}`;
             if (visited.has(key)) continue;
             const neighborState = boardState[n.row][n.col];
-            if (neighborState === 0) {
-                libertyPoints.add(key);
-            } else if (neighborState === player) {
+            if (neighborState === 0) libertyPoints.add(key);
+            else if (neighborState === player) {
                 visited.add(key);
                 queue.push({ row: n.row, col: n.col });
             }
@@ -355,7 +426,6 @@ function findGroup(startRow, startCol, boardState) {
     }
     return { stones: groupStones, liberties: libertyPoints.size };
 }
-
 function getNeighbors(row, col) {
     const neighbors = [];
     if (row > 0) neighbors.push({ row: row - 1, col: col });
@@ -366,123 +436,65 @@ function getNeighbors(row, col) {
 }
 
 // =================================================================
-// AI Logic (No changes needed here)
+// AI Logic (No changes needed)
 // =================================================================
-
 function getAIMove() {
-    let bestScore = -Infinity;
-    let bestMoves = [];
-    const availableMoves = [];
-    for (let r = 0; r < BOARD_SIZE; r++) {
-        for (let c = 0; c < BOARD_SIZE; c++) {
-            if (board[r][c] === 0) {
-                availableMoves.push({ r, c });
-            }
-        }
-    }
+    let bestScore = -Infinity; let bestMoves = []; const availableMoves = [];
+    for (let r = 0; r < BOARD_SIZE; r++) { for (let c = 0; c < BOARD_SIZE; c++) { if (board[r][c] === 0) availableMoves.push({ r, c }); } }
     if(availableMoves.length === 0) return {pass: true};
     for (const move of availableMoves) {
-        let score = 0;
-        const tempBoard = board.map(r => r.slice());
+        let score = 0; const tempBoard = board.map(r => r.slice());
         const capturedStones = placeStone(move.r, move.c, 2); 
         if (capturedStones === null) continue; 
-        score += capturedStones.length * 100;
-        board = tempBoard; 
+        score += capturedStones.length * 100; board = tempBoard; 
         const neighbors = getNeighbors(move.r, move.c);
-        for (const n of neighbors) {
-            if (board[n.row][n.col] === 1) { 
-                const group = findGroup(n.row, n.col, board);
-                if (group.liberties === 2) score += 25;
-            }
-        }
-        for (const n of neighbors) {
-            if (board[n.row][n.col] === 2) {
-                const group = findGroup(n.row, n.col, board);
-                if (group.liberties === 1) score += 50; 
-            }
-        }
-        for (const n of neighbors) {
-            if (board[n.row][n.col] === 2) score += 1;
-        }
-        if (difficulty !== 'easy') {
-            const edgeDist = Math.min(move.r, move.c, BOARD_SIZE - 1 - move.r, BOARD_SIZE - 1 - move.c);
-            if (edgeDist === 0) score += 3; 
-            if (edgeDist <= 2) score += 1; 
-        }
-        if (score > bestScore) {
-            bestScore = score;
-            bestMoves = [move];
-        } else if (score === bestScore) {
-            bestMoves.push(move);
-        }
+        for (const n of neighbors) { if (board[n.row][n.col] === 1) { const group = findGroup(n.row, n.col, board); if (group.liberties === 2) score += 25; } }
+        for (const n of neighbors) { if (board[n.row][n.col] === 2) { const group = findGroup(n.row, n.col, board); if (group.liberties === 1) score += 50; } }
+        for (const n of neighbors) { if (board[n.row][n.col] === 2) score += 1; }
+        if (difficulty !== 'easy') { const edgeDist = Math.min(move.r, move.c, BOARD_SIZE - 1 - move.r, BOARD_SIZE - 1 - move.c); if (edgeDist === 0) score += 3;  if (edgeDist <= 2) score += 1;  }
+        if (score > bestScore) { bestScore = score; bestMoves = [move]; } else if (score === bestScore) bestMoves.push(move);
     }
     board = board.map(r => r.slice()); 
-    if (bestMoves.length > 0) {
-        return bestMoves[Math.floor(Math.random() * bestMoves.length)];
-    } else {
-        return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : {pass: true};
-    }
+    if (bestMoves.length > 0) return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+    else return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : {pass: true};
 }
 
 // =================================================================
-// Game Flow & UI (No major changes, just ensuring functions are called correctly)
+// Game Flow & UI (Mostly unchanged, ensuring correct piece variable usage)
 // =================================================================
-
 function resetGame() {
     if (unsubscribeGameListener) unsubscribeGameListener();
-    gameOver = true;
-    activeGameId = null;
-    localPlayerNum = 0;
-    currentPlayer = 1;
-    consecutivePasses = 0;
-    captures = { 1: 0, 2: 0 };
-    koState = null;
+    gameOver = true; activeGameId = null; localPlayerNum = 0; currentPlayer = 1;
+    consecutivePasses = 0; captures = { 1: 0, 2: 0 }; koState = null;
     initializeBoardArray();
     if (scene) Object.values(stoneModels).forEach(model => scene.remove(model));
-    stoneModels = {};
-    updateScoreUI();
-    turnText.textContent = "";
+    stoneModels = {}; updateScoreUI(); turnText.textContent = "";
     passTurnButton.classList.add('hidden');
 }
-
 function startNewAIGame() {
-    resetGame();
-    gameMode = 'ai';
-    currentDifficulty = difficultySelect.value;
-    gameOver = false;
+    resetGame(); gameMode = 'ai'; currentDifficulty = difficultySelect.value; gameOver = false;
     player1Settings.color = playerColorInput.value;
     player1Settings.piece = playerPieceSelect.value; 
     player2Settings.color = player1Settings.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
     player2Settings.piece = DEFAULT_PIECE_KEY;
-    initThreeJS();
-    updateStatusText(`Playing vs. AI (${currentDifficulty}).`);
-    updateTurnText();
-    passTurnButton.classList.remove('hidden');
-    closeModal(gameSetupModal);
+    initThreeJS(); updateStatusText(`Playing vs. AI (${currentDifficulty}).`); updateTurnText();
+    passTurnButton.classList.remove('hidden'); closeModal(gameSetupModal);
 }
-
 function handlePlayerMove(row, col) {
     const captured = placeStone(row, col, currentPlayer);
     if (captured !== null) { 
         consecutivePasses = 0;
-        addStoneTo3DScene(col, row, currentPlayer);
+        addStoneTo3DScene(col, row, currentPlayer); // Pass col, row for 3D x, z
         if (captured.length > 0) {
             captures[currentPlayer] += captured.length;
-            captured.forEach(stone => removeStoneFrom3DScene(stone.col, stone.row));
+            captured.forEach(stone => removeStoneFrom3DScene(stone.col, stone.row)); // Pass col, row for 3D x, z
             updateScoreUI();
         }
         currentPlayer = (currentPlayer === 1) ? 2 : 1;
-        if (gameMode === 'multiplayer') {
-            updateGameInFirebase({ board, captures, currentPlayer, consecutivePasses, koState });
-        } else {
-             updateTurnText();
-            if (currentPlayer === 2) setTimeout(aiTurn, 500);
-        }
-    } else {
-        console.log("Illegal move attempted.");
-    }
+        if (gameMode === 'multiplayer') updateGameInFirebase({ board, captures, currentPlayer, consecutivePasses, koState });
+        else { updateTurnText(); if (currentPlayer === 2) setTimeout(aiTurn, 500); }
+    } else console.log("Illegal move attempted.");
 }
-
 function handlePassTurn() {
     if (gameOver || (gameMode === 'multiplayer' && currentPlayer !== localPlayerNum)) return;
     consecutivePasses++;
@@ -491,109 +503,69 @@ function handlePassTurn() {
         if (gameMode === 'multiplayer') updateGameInFirebase({ gameOver: true, winner: determineWinner(), consecutivePasses });
     } else {
         currentPlayer = (currentPlayer === 1) ? 2 : 1;
-        if (gameMode === 'multiplayer') {
-            updateGameInFirebase({ currentPlayer, consecutivePasses });
-        } else {
-            updateTurnText();
-            if (currentPlayer === 2) setTimeout(aiTurn, 500);
-        }
+        if (gameMode === 'multiplayer') updateGameInFirebase({ currentPlayer, consecutivePasses });
+        else { updateTurnText(); if (currentPlayer === 2) setTimeout(aiTurn, 500); }
     }
 }
-
 function aiTurn() {
     if (gameOver) return;
     const move = getAIMove();
     if(move.pass) handlePassTurn();
     else handlePlayerMove(move.r, move.c);
 }
-
 function endGame() {
-    gameOver = true;
-    const winner = determineWinner();
-    if (winner === 0) {
-        updateStatusText("Game Over - It's a draw!");
-    } else {
-        const winnerName = (winner === localPlayerNum || (gameMode === 'ai' && winner === 1)) ? "You" : "Opponent";
-        updateStatusText(`Game Over - ${winnerName} won!`);
-    }
-    turnText.textContent = "Thank you for playing.";
-    passTurnButton.classList.add('hidden');
+    gameOver = true; const winner = determineWinner();
+    if (winner === 0) updateStatusText("Game Over - It's a draw!");
+    else { const winnerName = (winner === localPlayerNum || (gameMode === 'ai' && winner === 1)) ? "You" : "Opponent"; updateStatusText(`Game Over - ${winnerName} won!`); }
+    turnText.textContent = "Thank you for playing."; passTurnButton.classList.add('hidden');
 }
-
-function determineWinner() {
-    if (captures[1] > captures[2]) return 1;
-    if (captures[2] > captures[1]) return 2;
-    return 0; 
-}
-
-function updateScoreUI() {
-    player1CapturesText.textContent = captures[1];
-    player2CapturesText.textContent = captures[2];
-}
-
+function determineWinner() { if (captures[1] > captures[2]) return 1; if (captures[2] > captures[1]) return 2; return 0; }
+function updateScoreUI() { player1CapturesText.textContent = captures[1]; player2CapturesText.textContent = captures[2]; }
 function updateStatusText(message) { statusText.textContent = message; }
 function updateTurnText() {
     if (gameOver) return;
-    if (gameMode === 'ai') {
-        turnText.textContent = currentPlayer === 1 ? "Your turn (Black)." : "AI's turn (White)...";
-    } else if (gameMode === 'multiplayer' && activeGameId) {
-        turnText.textContent = currentPlayer === localPlayerNum ? "Your turn." : "Opponent's turn.";
-    }
+    if (gameMode === 'ai') turnText.textContent = currentPlayer === 1 ? "Your turn (Black)." : "AI's turn (White)...";
+    else if (gameMode === 'multiplayer' && activeGameId) turnText.textContent = currentPlayer === localPlayerNum ? "Your turn." : "Opponent's turn.";
 }
 
 // =================================================================
-// Multiplayer (Firebase) (No major changes needed here)
+// Multiplayer (Firebase) (Ensuring correct piece variable usage)
 // =================================================================
-
 async function createMultiplayerGame() {
     if (!auth.currentUser) return;
-    resetGame();
-    gameMode = 'multiplayer';
-    localPlayerNum = 1;
-    gameOver = false;
+    resetGame(); gameMode = 'multiplayer'; localPlayerNum = 1; gameOver = false;
     player1Settings.uid = auth.currentUser.uid;
     player1Settings.color = playerColorInput.value;
     player1Settings.piece = playerPieceSelect.value; 
     const newGameData = {
-        player1: player1Settings, player2: null,
-        board, captures, currentPlayer: 1,
+        player1: player1Settings, player2: null, board, captures, currentPlayer: 1,
         status: 'waiting', consecutivePasses: 0, koState: null,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     try {
-        const gameRef = await db.collection('games').add(newGameData);
-        activeGameId = gameRef.id;
-        initThreeJS();
-        updateStatusText("Waiting for opponent...");
-        closeModal(gameSetupModal);
+        const gameRef = await db.collection('games').add(newGameData); activeGameId = gameRef.id;
+        initThreeJS(); updateStatusText("Waiting for opponent..."); closeModal(gameSetupModal);
         document.getElementById('share-game-code-display').value = activeGameId;
         document.getElementById('share-game-link-display').value = `${window.location.origin}${window.location.pathname}?game=${activeGameId}`;
-        openModal(shareGameModal);
-        listenToGameUpdates(activeGameId);
+        openModal(shareGameModal); listenToGameUpdates(activeGameId);
     } catch (error) { console.error("Error creating game:", error); }
 }
-
 async function joinMultiplayerGame(gameId) {
     if (!auth.currentUser) return;
-    resetGame();
-    const gameRef = db.collection('games').doc(gameId);
+    resetGame(); const gameRef = db.collection('games').doc(gameId);
     try {
         const doc = await gameRef.get();
         if (!doc.exists) { alert("Game not found."); return; }
         const gameData = doc.data();
         if (gameData.player2 && gameData.player2.uid !== auth.currentUser.uid) { alert("Game is full."); return; }
         if (gameData.player1.uid === auth.currentUser.uid) { alert("Cannot join your own game."); return; }
-        localPlayerNum = 2;
-        player2Settings.uid = auth.currentUser.uid;
+        localPlayerNum = 2; player2Settings.uid = auth.currentUser.uid;
         player2Settings.color = gameData.player1.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
         player2Settings.piece = playerPieceSelect.value; 
         await gameRef.update({ player2: player2Settings, status: 'active' });
-        activeGameId = gameId;
-        listenToGameUpdates(activeGameId);
-        closeModal(joinGameModal);
+        activeGameId = gameId; listenToGameUpdates(activeGameId); closeModal(joinGameModal);
     } catch (error) { console.error("Error joining game:", error); }
 }
-
 function listenToGameUpdates(gameId) {
     if (unsubscribeGameListener) unsubscribeGameListener();
     unsubscribeGameListener = db.collection('games').doc(gameId)
@@ -601,42 +573,27 @@ function listenToGameUpdates(gameId) {
             if (!doc.exists) { updateStatusText("Game deleted."); resetGame(); return; }
             const gameData = doc.data();
             if (!renderer && !gameOver) initThreeJS();
-            board = gameData.board;
-            captures = gameData.captures;
-            currentPlayer = gameData.currentPlayer;
-            consecutivePasses = gameData.consecutivePasses;
-            koState = gameData.koState;
-            player1Settings = gameData.player1;
-            if(gameData.player2) player2Settings = gameData.player2;
+            board = gameData.board; captures = gameData.captures; currentPlayer = gameData.currentPlayer;
+            consecutivePasses = gameData.consecutivePasses; koState = gameData.koState;
+            player1Settings = gameData.player1; if(gameData.player2) player2Settings = gameData.player2;
             sync3DAndUI(gameData);
             if (gameData.gameOver) {
-                gameOver = true;
-                endGame();
+                gameOver = true; endGame();
                 if (unsubscribeGameListener) unsubscribeGameListener();
             } else {
-                gameOver = false;
-                passTurnButton.classList.remove('hidden');
-                updateTurnText();
+                gameOver = false; passTurnButton.classList.remove('hidden'); updateTurnText();
             }
-        }, error => {
-            console.error("Firebase listener error:", error);
-            updateStatusText("Connection error.");
-        });
+        }, error => { console.error("Firebase listener error:", error); updateStatusText("Connection error."); });
 }
-
 function sync3DAndUI(gameData) {
-     Object.values(stoneModels).forEach(model => scene.remove(model));
-     stoneModels = {};
+     Object.values(stoneModels).forEach(model => scene.remove(model)); stoneModels = {};
      for(let r=0; r<BOARD_SIZE; r++) {
          for(let c=0; c<BOARD_SIZE; c++) {
-             if(gameData.board[r][c] !== 0) {
-                 addStoneTo3DScene(c, r, gameData.board[r][c]);
-             }
+             if(gameData.board[r][c] !== 0) addStoneTo3DScene(c, r, gameData.board[r][c]);
          }
      }
      updateScoreUI();
 }
-
 async function updateGameInFirebase(dataToUpdate) {
     if (!activeGameId || !auth.currentUser) return;
     try { await db.collection('games').doc(activeGameId).update(dataToUpdate); }

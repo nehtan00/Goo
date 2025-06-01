@@ -1,21 +1,26 @@
 /* =================================================================
-// Mythos Go - style.css (Visual Overhaul)
+// Mythos Go - style.css (Centering & Polish)
 // ================================================================= */
 
 /* --- Global Styles & Font --- */
 :root {
     --primary-font: 'Cinzel', serif;
     --text-color: #333;
-    --background-color: #f0f0f0; /* Lighter grey for better contrast */
+    --background-color: #f0f0f0; 
     --border-color: #000000;
-    --wood-color: #d2b48c;
+    --marble-board-fallback-color: #e1e1e1; /* Fallback if texture fails */
+}
+
+html, body {
+    height: 100%; /* Ensure body takes full height */
+    margin: 0;
+    padding: 0;
 }
 
 body {
     font-family: Arial, sans-serif;
     background-color: var(--background-color);
     color: var(--text-color);
-    margin: 0;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
@@ -33,6 +38,7 @@ header {
     flex-wrap: wrap;
     position: relative;
     z-index: 10;
+    flex-shrink: 0; /* Prevent header from shrinking */
 }
 
 .logo-container {
@@ -66,32 +72,39 @@ main {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center; /* Center content vertically */
+    align-items: center; /* Center children horizontally */
+    justify-content: center; /* Center children vertically */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 #game-container {
     width: 90vw;
     height: 90vw; 
-    max-width: 600px;
-    max-height: 600px;
-    margin: 15px auto;
+    max-width: 550px; /* Adjusted max size for better balance */
+    max-height: 550px;
+    margin: 20px auto; /* Ensures container itself is centered if main has space */
     border-radius: 8px;
     box-shadow: 0 10px 20px rgba(0,0,0,0.2), 0 6px 6px rgba(0,0,0,0.25);
     cursor: pointer;
-    background-color: var(--wood-color); /* Fallback color */
+    background-color: var(--marble-board-fallback-color); 
+    overflow: hidden; /* Important if renderer is slightly larger */
 }
 
 #game-info-panel {
     text-align: center;
+    margin-top: 15px;
+    width: 100%;
+    max-width: 550px; /* Match game container width */
 }
 
 #score-board {
     display: flex;
-    justify-content: center;
-    gap: 30px;
+    justify-content: space-around; /* Better spacing for scores */
+    gap: 20px;
     font-family: var(--primary-font);
     font-weight: 700;
+    margin-bottom: 10px;
 }
 
 #status-text {
@@ -129,7 +142,10 @@ button:hover, button:focus {
 }
 
 #action-buttons {
-    margin-top: 10px;
+    margin-top: 15px;
+    display: flex; /* Align buttons in a row */
+    justify-content: center;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
 }
 
 /* --- Footer --- */
@@ -141,6 +157,7 @@ footer {
     border-top: 2px solid var(--border-color);
     font-size: 0.8em;
     letter-spacing: 0.5px;
+    flex-shrink: 0; /* Prevent footer from shrinking */
 }
 
 /* --- Modal Styles (Overhauled) --- */
@@ -152,13 +169,13 @@ footer {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.6);
-    display: flex; /* Use flexbox for centering */
+    display: flex; 
     align-items: center;
     justify-content: center;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
-    padding: 20px; /* Add padding for smaller screens */
+    padding: 20px; 
     box-sizing: border-box;
 }
 
@@ -176,14 +193,15 @@ footer {
     max-width: 500px;
     position: relative;
     text-align: left;
-    max-height: 90vh; /* Limit height to 90% of viewport */
-    overflow-y: auto; /* Enable vertical scrolling */
+    max-height: 90vh; 
+    overflow-y: auto; 
     border-radius: 8px;
 }
 
 .modal-content.modal-large {
-    max-width: 800px; /* Wider modal for rules */
+    max-width: 800px; 
 }
+
 
 .modal-content h2 {
     font-family: var(--primary-font);
@@ -210,7 +228,7 @@ footer {
 .close-button:hover {
     color: var(--border-color);
     background: none;
-    transform: none; /* Override default button hover */
+    transform: none; 
     box-shadow: none;
 }
 
@@ -225,7 +243,7 @@ footer {
 }
 
 .modal-content label {
-    display: block; /* Make labels take full width for better alignment */
+    display: block; 
     margin-bottom: 8px;
     font-weight: bold;
 }
@@ -312,8 +330,18 @@ footer {
     #game-container {
         width: 95vw;
         height: 95vw;
+        max-width: none; /* Allow it to fill more of smaller screens */
+        max-height: none;
     }
     .modal-content {
         padding: 20px;
+        max-height: 85vh; /* Ensure scrollability on small screens */
+    }
+    #action-buttons {
+        flex-direction: column; /* Stack buttons on small screens */
+    }
+    #action-buttons button {
+        width: 80%; /* Make buttons wider for easier tapping */
+        margin: 8px auto;
     }
 }

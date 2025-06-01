@@ -9,7 +9,7 @@
     --text-color: #3a322b; /* Dark brown for main text, good on light marble */
     
     /* ** ENSURE THIS PATH IS CORRECT for your desired page background marble ** */
-    --page-marble-texture: url('assets/light_marble_wall_texture.jpg'); 
+    --page-marble-texture: url('assets/wall.jpg'); 
     
     --page-background-fallback: #f5f0e8; /* Light parchment/marble fallback */
     --button-text-color: #403020; /* Dark rich brown for button text */

@@ -163,7 +163,7 @@ function initThreeJS() {
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.9; // Your current exposure setting
+    renderer.toneMappingExposure = 0.4; // Your current exposure setting
     renderer.outputEncoding = THREE.sRGBEncoding;
     gameContainer.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement); 
@@ -272,8 +272,8 @@ function addStoneTo3DScene(x, z, player) {
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
-    const pieceTargetHeight = 1.8; // **Desired final height of the piece on the board**
-    const pieceYOnBoard = 1.1;    // Y for piece BASE, clearly on top of grid lines
+    const pieceTargetHeight = 1.3; // **Desired final height of the piece on the board**
+    const pieceYOnBoard = 1;    // Y for piece BASE, clearly on top of grid lines
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {

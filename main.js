@@ -167,13 +167,19 @@ function initThreeJS() {
     controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2); controls.enableDamping = true;
     controls.dampingFactor = 0.05; controls.minDistance = BOARD_SIZE * 0.7; controls.maxDistance = BOARD_SIZE * 2.5;
     controls.maxPolarAngle = Math.PI / 2 - 0.02; 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6); // Reduced main hemisphere
+   // **LIGHTING: Changed to Candlelight Color**
+    const candlelight = 0xffd580; // A nice warm, orangey-yellow for candlelight
+    const groundColor = 0x402808; // A darker, brownish color for the ground reflection
+    const hemiLight = new THREE.HemisphereLight(candlelight, groundColor, 0.8); // Also reduced intensity
     hemiLight.position.set(0, 20, 0); scene.add(hemiLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);  // Reduced main directional
+    // The candlelight color is already defined above from the hemiLight section
+    const dirLight = new THREE.DirectionalLight(candlelight, 0.7); // Changed from white
     dirLight.position.set(10, 15, 12); dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; scene.add(dirLight);
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.3); // Reduced fill light
-    fillLight.position.set(-10, 10, -5); scene.add(fillLight);
+
+    const fillLight = new THREE.DirectionalLight(candlelight, 0.3); // Changed from white
+    fillLight.position.set(-10, 10, -5);
+    scene.add(fillLight);
     createFloatingGridBoard(); 
     raycaster = new THREE.Raycaster(); mouse = new THREE.Vector2();
     if (gameContainer) gameContainer.addEventListener('click', onBoardClick, false);
@@ -237,8 +243,8 @@ function createFloatingGridBoard() {
 
 function drawBoardGridLines() {
     const lineThickness = 0.04; 
-    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.1, metalness: 0.9 }); 
-    const lineY = 0.01; // Y position relative to the board's top surface (which is at world Y=0)
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.1, metalness: 1 }); 
+    const lineY = 0.005; // Y position relative to the board's top surface (which is at world Y=0)
     
     const gridLinesGroup = new THREE.Group();
     // The board's top surface is at world Y=0. Grid lines are placed on this.

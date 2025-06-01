@@ -3,15 +3,21 @@
 // --- 1. Firebase Configuration ---
 // These are your project's specific credentials.
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+
+
+
+// Inside firebase.js
 const firebaseConfig = {
-  apiKey: "AIzaSyAn24mjnWAbmVevthpKDadNl0cLcBN3UH0",
+  apiKey: "AIzaSyCHTM6Xut0hYcIh0GSTYAejPP98aCwofAU", // Paste the new key here
   authDomain: "gooues-bdd91.firebaseapp.com",
   projectId: "gooues-bdd91",
-  storageBucket: "gooues-bdd91.firebasestorage.app",
+  storageBucket: "gooues-bdd91.appspot.com",
   messagingSenderId: "1095910317502",
-  appId: "1:1095910317502:web:c6f0e8c660964453642def",
-  measurementId: "G-DT67H29YYF"
+  appId: "1:1095910317502:web:c6f0e8c660964453642def", 
 };
+// ... rest of the file
+
+
 
 // --- 2. Initialize Firebase App and Services ---
 const app = firebase.initializeApp(firebaseConfig);

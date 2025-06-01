@@ -273,8 +273,8 @@ function addStoneTo3DScene(x, z, player) {
     const settings = player === 1 ? player1Settings : player2Settings;
     const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
-    const pieceBaseScaleMultiplier = 1.65; // **FURTHER INCREASED SCALE**
-    const pieceYOnBoard = 0.08;    // Y for piece base, above grid lines at ~0.01 + lineThickness/2
+    const pieceBaseScaleMultiplier = 1.69; // **FURTHER INCREASED SCALE**
+    const pieceYOnBoard = 0.09;    // Y for piece base, above grid lines at ~0.01 + lineThickness/2
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {

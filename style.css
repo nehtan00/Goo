@@ -1,5 +1,5 @@
 /* =================================================================
-// Mythos Go - style.css (Centering & Polish)
+// Mythos Go - style.css (Inset Game Container & Polish)
 // ================================================================= */
 
 /* --- Global Styles & Font --- */
@@ -8,11 +8,11 @@
     --text-color: #333;
     --background-color: #f0f0f0; 
     --border-color: #000000;
-    --marble-board-fallback-color: #e1e1e1; /* Fallback if texture fails */
+    --marble-board-fallback-color: #e1e1e1; 
 }
 
 html, body {
-    height: 100%; /* Ensure body takes full height */
+    height: 100%; 
     margin: 0;
     padding: 0;
 }
@@ -38,7 +38,7 @@ header {
     flex-wrap: wrap;
     position: relative;
     z-index: 10;
-    flex-shrink: 0; /* Prevent header from shrinking */
+    flex-shrink: 0; 
 }
 
 .logo-container {
@@ -72,8 +72,8 @@ main {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    align-items: center; /* Center children horizontally */
-    justify-content: center; /* Center children vertically */
+    align-items: center; 
+    justify-content: center; 
     width: 100%;
     box-sizing: border-box;
 }
@@ -81,26 +81,32 @@ main {
 #game-container {
     width: 90vw;
     height: 90vw; 
-    max-width: 550px; /* Adjusted max size for better balance */
+    max-width: 550px; 
     max-height: 550px;
-    margin: 20px auto; /* Ensures container itself is centered if main has space */
-    border-radius: 8px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2), 0 6px 6px rgba(0,0,0,0.25);
+    margin: 20px auto; 
+    border-radius: 10px; /* Slightly more rounded */
+    /* **NEW: Inset shadow for "sunken in" look** */
+    box-shadow: 
+        inset 0 0 10px rgba(0,0,0,0.3), /* Inner shadow for depth */
+        0 5px 15px rgba(0,0,0,0.1);   /* Outer subtle shadow for lift */
     cursor: pointer;
-    background-color: var(--marble-board-fallback-color); 
-    overflow: hidden; /* Important if renderer is slightly larger */
+    background-color: #333; /* Darker background for the container itself before 3D scene loads */
+    overflow: hidden; 
+    border: 3px solid #444; /* Thicker border to enhance inset feel */
+    padding: 5px; /* Small padding so 3D scene doesn't touch border */
+    box-sizing: border-box;
 }
 
 #game-info-panel {
     text-align: center;
     margin-top: 15px;
     width: 100%;
-    max-width: 550px; /* Match game container width */
+    max-width: 550px; 
 }
 
 #score-board {
     display: flex;
-    justify-content: space-around; /* Better spacing for scores */
+    justify-content: space-around; 
     gap: 20px;
     font-family: var(--primary-font);
     font-weight: 700;
@@ -131,6 +137,7 @@ button {
     cursor: pointer;
     transition: all 0.3s ease;
     color: var(--border-color);
+    border-radius: 4px; /* Slightly rounded buttons */
 }
 
 button:hover, button:focus {
@@ -143,9 +150,9 @@ button:hover, button:focus {
 
 #action-buttons {
     margin-top: 15px;
-    display: flex; /* Align buttons in a row */
+    display: flex; 
     justify-content: center;
-    flex-wrap: wrap; /* Allow wrapping on small screens */
+    flex-wrap: wrap; 
 }
 
 /* --- Footer --- */
@@ -157,7 +164,7 @@ footer {
     border-top: 2px solid var(--border-color);
     font-size: 0.8em;
     letter-spacing: 0.5px;
-    flex-shrink: 0; /* Prevent footer from shrinking */
+    flex-shrink: 0; 
 }
 
 /* --- Modal Styles (Overhauled) --- */
@@ -330,18 +337,19 @@ footer {
     #game-container {
         width: 95vw;
         height: 95vw;
-        max-width: none; /* Allow it to fill more of smaller screens */
+        max-width: none; 
         max-height: none;
+        padding: 3px; /* Adjust padding for smaller screens */
     }
     .modal-content {
         padding: 20px;
-        max-height: 85vh; /* Ensure scrollability on small screens */
+        max-height: 85vh; 
     }
     #action-buttons {
-        flex-direction: column; /* Stack buttons on small screens */
+        flex-direction: column; 
     }
     #action-buttons button {
-        width: 80%; /* Make buttons wider for easier tapping */
+        width: 80%; 
         margin: 8px auto;
     }
 }

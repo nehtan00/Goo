@@ -514,3 +514,4 @@ function closeModal(modal) { if (modal) modal.classList.add('hidden'); else cons
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => alert("Copied!")); }
 
 console.log("main.js: SCRIPT EXECUTION FINISHED (END OF FILE).");
+<script src="firebase.js" type="module"></script>

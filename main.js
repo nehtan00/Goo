@@ -598,6 +598,24 @@ function listenToGameUpdates(gameId) {
     }, error => { console.error("Firebase listener error:", error); updateStatusText("Connection error."); });
 }
 
+function sync3DAndUI() {
+    // Remove all stones from the scene
+    if (scene && stoneModels) {
+        Object.values(stoneModels).forEach(model => scene.remove(model));
+        stoneModels = {};
+    }
+    // Redraw stones from the board array
+    for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+            if (board[r][c] === 1 || board[r][c] === 2) {
+                addStoneTo3DScene(c, r, board[r][c]);
+            }
+        }
+    }
+    updateScoreUI();
+    updateTurnText();
+}
+
 function updateTurnText() {
     if (gameOver) return;
     if (!turnText) return;
@@ -607,6 +625,11 @@ function updateTurnText() {
         turnText.textContent = currentPlayer === localPlayerNum ? "Your turn." : "Opponent's turn.";
     else
         turnText.textContent = "";
+}
+
+function updateStatusText(text) {
+    if (statusText) statusText.textContent = text;
+    else console.warn("updateStatusText: statusText element not found.");
 }
 
 function updateScoreUI() {

@@ -286,9 +286,10 @@ function addStoneTo3DScene(x, z, player) {
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {
         const model = gltf.scene; 
+
+        // --- SCALE TO TARGET HEIGHT ---
         const initialBox = new THREE.Box3().setFromObject(model);
         const initialSize = initialBox.getSize(new THREE.Vector3()); 
-        
         let finalScale = 0.5 * pieceSpecificScaleMultiplier;
         if (initialSize.y !== 0) {
             const scaleToTargetHeight = targetVisualPieceHeight / initialSize.y;
@@ -296,21 +297,20 @@ function addStoneTo3DScene(x, z, player) {
         }
         model.scale.set(finalScale, finalScale, finalScale);
 
-        // Align base to y=0
-        const newScaledBox = new THREE.Box3().setFromObject(model);
-        model.position.y -= newScaledBox.min.y;
+        // --- ALIGN BASE TO Y=0 AND CENTER X/Z ---
+        // Recompute bounding box after scaling
+        const scaledBox = new THREE.Box3().setFromObject(model);
+        const size = scaledBox.getSize(new THREE.Vector3());
+        const center = scaledBox.getCenter(new THREE.Vector3());
 
-        // Center model
-        const centerOffset = newScaledBox.getCenter(new THREE.Vector3());
-        model.position.x -= centerOffset.x;
-        model.position.z -= centerOffset.z;
-
-        // --- Fix: Force piece to grid cell center ---
-        model.position.x = x;
-        model.position.z = z;
+        // Move model so its base is at y=0 and it's centered in X/Z
+        model.position.x += (x - center.x);
+        model.position.z += (z - center.z);
+        model.position.y += (0 - scaledBox.min.y) + pieceYOnBoard;
 
         // Drop animation
-        const animationStartY = pieceYOnBoard + 1.5; 
+        const animationStartY = model.position.y + 1.5; 
+        const targetY = model.position.y;
         model.position.y = animationStartY;
 
         model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true;
@@ -320,8 +320,7 @@ function addStoneTo3DScene(x, z, player) {
         }});
         scene.add(model); stoneModels[key] = model;
 
-        let currentY = model.position.y; 
-        const targetY = pieceYOnBoard; 
+        let currentY = animationStartY; 
         const dropSpeed = 0.10; 
         function animateDrop() { 
             if (currentY > targetY) { 

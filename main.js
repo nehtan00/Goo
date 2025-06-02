@@ -525,37 +525,40 @@ async function joinMultiplayerGame(gameId) {
         console.error("Error joining game:", error);
     }
 }
-function listenToGameUpdates(gameId) { /* ... with boardString parsing ... */
+function listenToGameUpdates(gameId) {
     if (unsubscribeGameListener) unsubscribeGameListener();
     const gameDocRef = doc(db, 'games', gameId);
     unsubscribeGameListener = onSnapshot(gameDocRef, docSnap => {
-            if (!docSnap.exists) { updateStatusText("Game deleted."); resetGame(); return; }
-            const gameData = docSnap.data();
-            if (!renderer && !gameOver) initThreeJS();
-            
-            if (gameData.boardString) {
-                try { board = JSON.parse(gameData.boardString); } 
-                catch (e) { console.error("Error parsing boardString from Firebase:", e, gameData.boardString); initializeBoardArray(); }
-            } else { console.warn("boardString missing, initializing empty board."); initializeBoardArray(); }
+        if (!docSnap.exists) { updateStatusText("Game deleted."); resetGame(); return; }
+        const gameData = docSnap.data();
 
-            koState = gameData.koState !== undefined ? gameData.koState : null; 
-            
-            captures = gameData.captures; 
-            currentPlayer = gameData.currentPlayer;
-            consecutivePasses = gameData.consecutivePasses; 
-            player1Settings = gameData.player1; if(gameData.player2) player2Settings = gameData.player2;
-            
-            sync3DAndUI(); 
-            
-            if (gameData.gameOver) {
-                gameOver = true; endGame();
-                if (unsubscribeGameListener) unsubscribeGameListener();
-            } else {
-                gameOver = false; 
-                if(passTurnButton) passTurnButton.classList.remove('hidden'); 
-                updateTurnText();
-            }
-        }, error => { console.error("Firebase listener error:", error); updateStatusText("Connection error."); });
+        // --- Ensure 3D scene is initialized before syncing UI ---
+        if (!scene || !renderer) {
+            initThreeJS();
+        }
+
+        if (gameData.boardString) {
+            try { board = JSON.parse(gameData.boardString); } 
+            catch (e) { console.error("Error parsing boardString from Firebase:", e, gameData.boardString); initializeBoardArray(); }
+        } else { console.warn("boardString missing, initializing empty board."); initializeBoardArray(); }
+
+        koState = gameData.koState !== undefined ? gameData.koState : null; 
+        captures = gameData.captures; 
+        currentPlayer = gameData.currentPlayer;
+        consecutivePasses = gameData.consecutivePasses; 
+        player1Settings = gameData.player1; if(gameData.player2) player2Settings = gameData.player2;
+        
+        sync3DAndUI(); 
+        
+        if (gameData.gameOver) {
+            gameOver = true; endGame();
+            if (unsubscribeGameListener) unsubscribeGameListener();
+        } else {
+            gameOver = false; 
+            if(passTurnButton) passTurnButton.classList.remove('hidden'); 
+            updateTurnText();
+        }
+    }, error => { console.error("Firebase listener error:", error); updateStatusText("Connection error."); });
 }
 function sync3DAndUI() { /* ... uses global board ... */
      Object.values(stoneModels).forEach(model => scene.remove(model)); stoneModels = {};

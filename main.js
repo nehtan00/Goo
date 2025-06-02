@@ -736,4 +736,42 @@ async function joinMultiplayerGame(gameId) {
     }
 }
 
+async function createMultiplayerGame() {
+    if (!auth || !auth.currentUser) {
+        alert("You must be signed in to create a game.");
+        return;
+    }
+    resetGame();
+    player1Settings.uid = auth.currentUser.uid;
+    player1Settings.color = playerColorInput ? playerColorInput.value : '#222222';
+    player1Settings.piece = playerPieceSelect ? playerPieceSelect.value : DEFAULT_PIECE_KEY;
+
+    const gameData = {
+        player1: player1Settings,
+        status: 'waiting',
+        boardString: JSON.stringify(Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0))),
+        captures: { 1: 0, 2: 0 },
+        currentPlayer: 1,
+        consecutivePasses: 0,
+        koState: null,
+        created: serverTimestamp()
+    };
+
+    try {
+        const gameRef = await addDoc(collection(db, 'games'), gameData);
+        activeGameId = gameRef.id;
+        localPlayerNum = 1;
+        addActiveGameId(activeGameId);
+        listenToGameUpdates(activeGameId);
+        closeModal(gameSetupModal);
+        openModal(shareGameModal);
+        document.getElementById('share-game-code-display').value = activeGameId;
+        document.getElementById('share-game-link-display').value = `${window.location.origin}?game=${activeGameId}`;
+        updateStatusText("Waiting for opponent...");
+    } catch (error) {
+        alert("Failed to create game: " + error.message);
+        console.error("Error creating game:", error);
+    }
+}
+
 console.log("main.js: SCRIPT EXECUTION FINISHED (END OF FILE).");

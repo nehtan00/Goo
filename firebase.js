@@ -31,7 +31,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 window.auth = auth;
-window.db = db;
+
 
 /**
  * Handles player authentication. It checks if a user is already signed in,
@@ -156,4 +156,6 @@ export async function updateGame(gameId, newBoard, nextPlayer) {
         currentPlayer: nextPlayer
     });
 }
+
+export { db };
 

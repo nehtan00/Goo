@@ -8,6 +8,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'; 
 import { collection, addDoc, doc, updateDoc, onSnapshot, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { db } from './firebase.js';
 
 console.log("main.js: SCRIPT EXECUTION STARTED (TOP OF FILE).");
 
@@ -109,6 +110,7 @@ function assignDOMElements() { /* ... unchanged ... */
     logoImg = document.getElementById('logo-img');
     if (!newGameButton) console.error("main.js: newGameButton NOT FOUND in assignDOMElements!");
     if (!gameContainer) console.error("main.js: gameContainer NOT FOUND in assignDOMElements!");
+    if (!startAiGameButton) console.error("main.js: startAiGameButton NOT FOUND in assignDOMElements!");
     console.log("main.js: assignDOMElements() FINISHED.");
 }
 function initEventListeners() { /* ... unchanged ... */ 
@@ -123,7 +125,14 @@ function initEventListeners() { /* ... unchanged ... */
         if (modalToClose) { button.addEventListener('click', () => closeModal(modalToClose)); } 
         else { console.warn("Could not find modal for close button with ID:", modalId); }
     });
-    if (startAiGameButton) startAiGameButton.addEventListener('click', startNewAIGame); else console.error("Start AI Game button not found for listener.");
+    if (startAiGameButton) {
+        startAiGameButton.addEventListener('click', () => {
+            console.log("Start AI Game button CLICKED");
+            startNewAIGame();
+        });
+    } else {
+        console.error("Start AI Game button not found for listener.");
+    }
     if (createMultGameButton) createMultGameButton.addEventListener('click', createMultiplayerGame); else console.error("Create Multiplayer Game button not found for listener.");
     if (joinMultGameButton) joinMultGameButton.addEventListener('click', () => {
         if(joinGameCodeInput) { const gameId = joinGameCodeInput.value.trim(); if (gameId) joinMultiplayerGame(gameId); else alert("Please enter a game code."); } 
@@ -403,7 +412,23 @@ function getAIMove() { let bestScore = -Infinity; let bestMoves = []; const avai
 // =================================================================
 // ... (Game Flow & UI functions unchanged) ...
 function resetGame() { if (unsubscribeGameListener) unsubscribeGameListener(); gameOver = true; activeGameId = null; localPlayerNum = 0; currentPlayer = 1; consecutivePasses = 0; captures = { 1: 0, 2: 0 }; koState = null; initializeBoardArray(); if (scene) Object.values(stoneModels).forEach(model => scene.remove(model)); stoneModels = {}; updateScoreUI(); if(turnText) turnText.textContent = ""; if (passTurnButton) passTurnButton.classList.add('hidden'); else console.error("Pass turn button not found in resetGame"); }
-function startNewAIGame() { resetGame(); gameMode = 'ai'; if(difficultySelect) currentDifficulty = difficultySelect.value; else currentDifficulty = 'easy'; gameOver = false; if(playerColorInput) player1Settings.color = playerColorInput.value; if(playerPieceSelect) player1Settings.piece = playerPieceSelect.value; player2Settings.color = player1Settings.color === '#FFFFFF' ? '#222222' : '#FFFFFF'; player2Settings.piece = DEFAULT_PIECE_KEY; initThreeJS(); updateStatusText(`Playing vs. AI (${currentDifficulty}).`); updateTurnText(); if (passTurnButton) passTurnButton.classList.remove('hidden'); if(gameSetupModal) closeModal(gameSetupModal); }
+function startNewAIGame() {
+    console.log("startNewAIGame CALLED");
+    resetGame();
+    gameMode = 'ai';
+    if(difficultySelect) currentDifficulty = difficultySelect.value;
+    else currentDifficulty = 'easy';
+    gameOver = false;
+    if(playerColorInput) player1Settings.color = playerColorInput.value;
+    if(playerPieceSelect) player1Settings.piece = playerPieceSelect.value;
+    player2Settings.color = player1Settings.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
+    player2Settings.piece = DEFAULT_PIECE_KEY;
+    initThreeJS();
+    updateStatusText(`Playing vs. AI (${currentDifficulty}).`);
+    updateTurnText();
+    if (passTurnButton) passTurnButton.classList.remove('hidden');
+    if(gameSetupModal) closeModal(gameSetupModal);
+}
 function handlePlayerMove(row, col) { const capturedStones = makeActualMove(row, col, currentPlayer); if (capturedStones !== null) { consecutivePasses = 0; addStoneTo3DScene(col, row, currentPlayer); if (capturedStones.length > 0) { captures[currentPlayer] += capturedStones.length; capturedStones.forEach(stone => removeStoneFrom3DScene(stone.col, stone.row)); updateScoreUI(); } currentPlayer = (currentPlayer === 1) ? 2 : 1; if (gameMode === 'multiplayer') updateGameInFirebase({ board, captures, currentPlayer, consecutivePasses, koState }); else { updateTurnText(); if (currentPlayer === 2) setTimeout(aiTurn, 500); } } else console.log("Illegal move attempted at " + row + "," + col); }
 function handlePassTurn() { if (gameOver || (gameMode === 'multiplayer' && currentPlayer !== localPlayerNum)) return; consecutivePasses++; if (consecutivePasses >= 2) { endGame(); if (gameMode === 'multiplayer') updateGameInFirebase({ gameOver: true, winner: determineWinner(), consecutivePasses }); } else { currentPlayer = (currentPlayer === 1) ? 2 : 1; if (gameMode === 'multiplayer') updateGameInFirebase({ currentPlayer, consecutivePasses }); else { updateTurnText(); if (currentPlayer === 2) setTimeout(aiTurn, 500); } } }
 function aiTurn() { if (gameOver) return; const move = getAIMove(); if(move.pass) handlePassTurn(); else handlePlayerMove(move.r, move.c); }

@@ -314,8 +314,8 @@ function addStoneTo3DScene(x, z, player) {
         model.scale.set(finalScale, finalScale, finalScale);
 
         // --- ORIENT PIECE TO FACE OPPONENT ---
-        // If this piece is NOT the local player's, rotate it 180° around Y
-        if (gameMode === 'multiplayer' && player !== localPlayerNum) {
+        // If this piece IS the local player's, rotate it 180° around Y
+        if (gameMode === 'multiplayer' && player === localPlayerNum) {
             model.rotation.y = Math.PI;
         }
 

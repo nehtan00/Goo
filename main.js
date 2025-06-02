@@ -609,6 +609,11 @@ function updateTurnText() {
         turnText.textContent = "";
 }
 
+function updateScoreUI() {
+    if (player1CapturesText) player1CapturesText.textContent = captures[1] || "0";
+    if (player2CapturesText) player2CapturesText.textContent = captures[2] || "0";
+}
+
 // --- Utility Functions ---
 function openModal(modal) { if (modal) modal.classList.remove('hidden'); else console.warn("Attempted to open null modal"); }
 function closeModal(modal) { if (modal) modal.classList.add('hidden'); else console.warn("Attempted to close null modal");}

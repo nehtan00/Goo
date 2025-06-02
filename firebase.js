@@ -19,48 +19,132 @@ const firebaseConfig = {
 
 
 
-// --- 2. Initialize Firebase App and Services ---
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
+// --- Initialization ---
+// Initialize the Firebase app and get instances of the services we'll use.
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-
-// --- 3. Anonymous Authentication ---
-auth.onAuthStateChanged(user => {
-  if (user) {
-    // User is signed in anonymously.
-    console.log("User signed in anonymously with UID:", user.uid);
-  } else {
-    // User is signed out. Attempt to sign them in.
-    auth.signInAnonymously().catch(error => {
-      console.error("Anonymous sign-in failed:", error);
-      document.getElementById('status-text').textContent = "Error: Could not connect to game services. Please refresh the page.";
+/**
+ * Handles player authentication. It checks if a user is already signed in,
+ * and if not, signs them in anonymously.
+ * @returns {Promise<User>} A promise that resolves with the Firebase user object.
+ */
+export function authenticatePlayer() {
+    return new Promise((resolve, reject) => {
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is already signed in.
+                console.log("Player already authenticated with UID:", user.uid);
+                resolve(user);
+            } else {
+                // User is not signed in, so sign them in anonymously.
+                signInAnonymously(auth)
+                    .then((userCredential) => {
+                        console.log("New player authenticated anonymously with UID:", userCredential.user.uid);
+                        resolve(userCredential.user);
+                    })
+                    .catch(error => {
+                        console.error("Error signing in anonymously:", error);
+                        reject(error);
+                    });
+            }
+        });
     });
-  }
-});
-
-
-/*
---- IMPORTANT: FIRESTORE SECURITY RULES ---
-You MUST set up security rules in your Firebase console for this to work.
-Go to your project's Firestore Database > Rules tab and paste the following:
-
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Games collection
-    match /games/{gameId} {
-      // Anyone who is authenticated (even anonymously) can read a game's state.
-      allow read: if request.auth != null;
-      
-      // A new game can be created by any authenticated user.
-      allow create: if request.auth != null;
-
-      // A game can only be updated by one of the two players in that game.
-      // This prevents others from interfering with a game in progress.
-      allow update: if request.auth != null && (request.auth.uid == resource.data.player1.uid || request.auth.uid == resource.data.player2.uid);
-    }
-  }
 }
 
-*/
+/**
+ * Creates a new game document in Firestore with an initial state.
+ * @param {string} creatorUid - The UID of the player creating the game.
+ * @param {Array<Array<number>>} initialBoard - The initial 2D array for the board state.
+ * @returns {Promise<string>} A promise that resolves with the unique ID of the new game.
+ */
+export async function createGame(creatorUid, initialBoard) {
+    // Generate a unique, short, and human-readable ID for the game.
+    const gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const gameRef = doc(db, 'games', gameId);
+
+    const newGame = {
+        gameId: gameId,
+        creatorId: creatorUid,
+        players: [creatorUid], // The creator is automatically player 1.
+        board: initialBoard,
+        currentPlayer: 1, // Player 1 (black) always starts.
+        status: 'waiting', // Game status: 'waiting', 'active', 'finished'
+        createdAt: serverTimestamp(),
+        winner: null,
+    };
+
+    await setDoc(gameRef, newGame);
+    console.log(`Game created with ID: ${gameId}`);
+    return gameId;
+}
+
+/**
+ * Adds the current player to an existing game document.
+ * @param {string} gameId - The ID of the game to join.
+ * @param {string} playerUid - The UID of the player who is joining.
+ * @returns {Promise<Object|null>} A promise that resolves with the game data if successful, or null if failed.
+ */
+export async function joinGame(gameId, playerUid) {
+    const gameRef = doc(db, 'games', gameId);
+    const gameSnap = await getDoc(gameRef);
+
+    if (!gameSnap.exists()) {
+        throw new Error("Game not found!");
+    }
+
+    const gameData = gameSnap.data();
+
+    // Check if there is space for a new player.
+    if (gameData.players.length >= 2) {
+        throw new Error("This game is already full.");
+    }
+
+    // Add the new player and update the game status to 'active'.
+    await updateDoc(gameRef, {
+        players: arrayUnion(playerUid),
+        status: 'active'
+    });
+    
+    console.log(`Player ${playerUid} joined game ${gameId}`);
+    return gameData;
+}
+
+
+/**
+ * Sets up a real-time listener on a game document.
+ * @param {string} gameId - The ID of the game to listen to.
+ * @param {function} onUpdate - The callback function to execute when the game data changes.
+ * It will be called with the new game data object.
+ * @returns {function} An `unsubscribe` function to stop listening to updates.
+ */
+export function listenToGameUpdates(gameId, onUpdate) {
+    const gameRef = doc(db, 'games', gameId);
+    
+    // onSnapshot returns the unsubscribe function automatically.
+    const unsubscribe = onSnapshot(gameRef, (doc) => {
+        if (doc.exists()) {
+            onUpdate(doc.data());
+        } else {
+            console.error("Game document disappeared.");
+            // You might want to handle this case in your UI (e.g., show an error message).
+        }
+    });
+
+    return unsubscribe;
+}
+
+/**
+ * Updates the game state in Firestore after a player makes a move.
+ * @param {string} gameId - The ID of the game being played.
+ * @param {Array<Array<number>>} newBoard - The updated 2D array representing the board.
+ * @param {number} nextPlayer - The number of the player whose turn it is now (1 or 2).
+ */
+export async function updateGame(gameId, newBoard, nextPlayer) {
+    const gameRef = doc(db, 'games', gameId);
+    await updateDoc(gameRef, {
+        board: newBoard,
+        currentPlayer: nextPlayer
+    });
+}

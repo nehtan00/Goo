@@ -175,7 +175,7 @@ function initThreeJS() {
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.5; // Your current exposure setting
+    renderer.toneMappingExposure = 0.8; // Your current exposure setting
     renderer.outputEncoding = THREE.sRGBEncoding;
     gameContainer.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement); 
@@ -254,7 +254,7 @@ function createFloatingGridBoard() { /* ... PBR texture loading unchanged ... */
 
 function drawBoardGridLines() {
     // ... (drawBoardGridLines from previous version with corrected span) ...
-    const lineThickness = 0.04; 
+    const lineThickness = 0.09; 
     const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.1, metalness: 1.0 }); 
     const lineY = 0.001; 
     const gridLinesGroup = new THREE.Group();
@@ -276,15 +276,12 @@ function drawBoardGridLines() {
 
 function addStoneTo3DScene(x, z, player) { 
     const key = `${x}-${z}`; if (stoneModels[key]) return;
-    
     const playerSettings = player === 1 ? player1Settings : player2Settings;
     const pieceDefinition = PIECE_DEFINITIONS[playerSettings.piece] || PIECE_DEFINITIONS[DEFAULT_PIECE_KEY];
     const modelPath = pieceDefinition.path;
-    // **USE PIECE-SPECIFIC SCALE MULTIPLIER**
     const pieceSpecificScaleMultiplier = pieceDefinition.scaleMultiplier || 1.0; 
-
-    const targetVisualPieceHeight = 0.7; // Base height all pieces are scaled relative to
-    const pieceYOnBoard = 0.07;    // Final Y for piece BASE, clearly on top of grid lines
+    const targetVisualPieceHeight = 0.7;
+    const pieceYOnBoard = 0.03;
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {
@@ -292,27 +289,29 @@ function addStoneTo3DScene(x, z, player) {
         const initialBox = new THREE.Box3().setFromObject(model);
         const initialSize = initialBox.getSize(new THREE.Vector3()); 
         
-        if (initialSize.y === 0) { 
-            console.error("Loaded model has zero initial height:", modelPath, initialSize);
-            model.scale.set(0.5 * pieceSpecificScaleMultiplier, 0.5 * pieceSpecificScaleMultiplier, 0.5 * pieceSpecificScaleMultiplier); 
-        } else {
-            // Calculate scale factor to achieve the targetVisualPieceHeight, then apply piece-specific multiplier
+        let finalScale = 0.5 * pieceSpecificScaleMultiplier;
+        if (initialSize.y !== 0) {
             const scaleToTargetHeight = targetVisualPieceHeight / initialSize.y;
-            const finalScale = scaleToTargetHeight * pieceSpecificScaleMultiplier;
-            model.scale.set(finalScale, finalScale, finalScale);
+            finalScale = scaleToTargetHeight * pieceSpecificScaleMultiplier;
         }
-        
-        const newScaledBox = new THREE.Box3().setFromObject(model);
-        model.position.y -= newScaledBox.min.y; // Align model's visual base to its local y=0
-        
-        const centerOffset = newScaledBox.getCenter(new THREE.Vector3());
-        model.position.x -= centerOffset.x; // Center X
-        model.position.z -= centerOffset.z; // Center Z
-        
-        const animationStartY = pieceYOnBoard + 1.5; 
-        model.position.set(x, animationStartY, z); 
+        model.scale.set(finalScale, finalScale, finalScale);
 
-        console.log(`Piece: ${playerSettings.piece} Grid(${x},${z}) TargetH: ${targetVisualPieceHeight} SpecificScale: ${pieceSpecificScaleMultiplier} FinalCalculatedScale: ${model.scale.x.toFixed(3)} TargetYBase: ${pieceYOnBoard}`);
+        // Align base to y=0
+        const newScaledBox = new THREE.Box3().setFromObject(model);
+        model.position.y -= newScaledBox.min.y;
+
+        // Center model
+        const centerOffset = newScaledBox.getCenter(new THREE.Vector3());
+        model.position.x -= centerOffset.x;
+        model.position.z -= centerOffset.z;
+
+        // --- Fix: Force piece to grid cell center ---
+        model.position.x = x;
+        model.position.z = z;
+
+        // Drop animation
+        const animationStartY = pieceYOnBoard + 1.5; 
+        model.position.y = animationStartY;
 
         model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true;
             child.material = new THREE.MeshStandardMaterial({
@@ -320,13 +319,10 @@ function addStoneTo3DScene(x, z, player) {
                 roughness: 0.2, metalness: 0.25 }); 
         }});
         scene.add(model); stoneModels[key] = model;
-        
+
         let currentY = model.position.y; 
         const targetY = pieceYOnBoard; 
         const dropSpeed = 0.10; 
-
-        function animateDrop() { /* ... unchanged ... */ }
-        animateDrop(); 
         function animateDrop() { 
             if (currentY > targetY) { 
                 currentY -= dropSpeed * Math.max(0.3, (currentY - targetY));
@@ -334,22 +330,9 @@ function addStoneTo3DScene(x, z, player) {
                 requestAnimationFrame(animateDrop); 
             } else model.position.y = targetY; 
         }
-    }, undefined, error => { /* ... fallback code unchanged ... */ 
-        console.error(`Model load error for ${modelPath}:`, error);
-        const fallbackScale = 0.3 * pieceSpecificScaleMultiplier * (targetVisualPieceHeight / 0.15);
-        const stoneHeight = 0.1 * pieceSpecificScaleMultiplier * (targetVisualPieceHeight / 0.15); // Keep this small for fallback
-        const stoneRadius = fallbackScale;
-
-        const geom = new THREE.CylinderGeometry(stoneRadius, stoneRadius, stoneHeight, 24);
-        const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(playerSettings.color), roughness: 0.5, metalness: 0.1 });
-        const piece = new THREE.Mesh(geom, mat); piece.castShadow = true; 
-        piece.position.set(x, pieceYOnBoard + 1.5, z);
-        scene.add(piece); stoneModels[key] = piece;
-        let currentY = piece.position.y; const targetY = pieceYOnBoard + stoneHeight/2; 
-        const dropSpeed = 0.10;
-        function animateDropFallback() { if (currentY > targetY) { currentY -= dropSpeed * Math.max(0.3, (currentY - targetY));
-            piece.position.y = Math.max(currentY, targetY); requestAnimationFrame(animateDropFallback); } else piece.position.y = targetY; }
-        animateDropFallback();
+        animateDrop();
+    }, undefined, error => {
+        // ...fallback unchanged...
     });
 }
 

@@ -17,9 +17,9 @@ const BOARD_SIZE = 9;
 // You will need to adjust the `scaleMultiplier` for each piece
 // to get the visual balance you want. 1.0 is the baseline.
 const PIECE_DEFINITIONS = {
-    'Achilles':     { path: 'assets/achilles.glb',      scaleMultiplier: 1.0 },
+    'Achilles':     { path: 'assets/achilles.glb',      scaleMultiplier: 2.0 },
     'War Elephant': { path: 'assets/war_elephant.glb',  scaleMultiplier: 1.0 }, // You'll likely want to adjust this
-    'Knight Horse': { path: 'assets/knight_horse.glb',  scaleMultiplier: 1.0 },
+    'Valkyrie':     { path: 'assets/valkyrie.glb',  scaleMultiplier: 1.0 },
     'Aztec':        { path: 'assets/aztec.glb',         scaleMultiplier: 1.0 }
 };
 const DEFAULT_PIECE_KEY = 'Achilles'; // Fallback if a selected piece isn't in PIECE_DEFINITIONS
@@ -232,8 +232,8 @@ function createFloatingGridBoard() { /* ... PBR texture loading unchanged ... */
 function drawBoardGridLines() {
     // ... (drawBoardGridLines from previous version with corrected span) ...
     const lineThickness = 0.04; 
-    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.1, metalness: 1 }); 
-    const lineY = 0.03; 
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.1, metalness: .8 }); 
+    const lineY = 0.025; 
     const gridLinesGroup = new THREE.Group();
     gridLinesGroup.position.y = lineY; 
     const gridSpan = BOARD_SIZE - 1;
@@ -359,7 +359,9 @@ function onBoardClick(event) { /* ... unchanged ... */
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(mouse, camera); const intersects = raycaster.intersectObject(boardMesh);
     if (intersects.length > 0) {
-        const point = intersects[0].point; const col = Math.round(point.x); const row = Math.round(point.z); 
+        const point = intersects[0].point;
+        const col = Math.round(point.x + (BOARD_SIZE - 1) / 2);
+        const row = Math.round(point.z + (BOARD_SIZE - 1) / 2);
         if (col >= 0 && col < BOARD_SIZE && row >= 0 && row < BOARD_SIZE) handlePlayerMove(row, col); 
     }
 }

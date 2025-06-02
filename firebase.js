@@ -1,23 +1,28 @@
-// This file initializes the connection to your Firebase project.
+// Import the necessary functions from the Firebase SDKs.
+// This modular approach keeps the code clean and optimizes bundle size.
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, 
+    setDoc, 
+    getDoc, 
+    updateDoc, 
+    onSnapshot, 
+    arrayUnion,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// --- 1. Firebase Configuration ---
-// These are your project's specific credentials.
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-
-
-
-// Inside firebase.js
+// --- Firebase Configuration ---
+// Your project's actual Firebase configuration object.
 const firebaseConfig = {
-  apiKey: "AIzaSyCHTM6Xut0hYcIh0GSTYAejPP98aCwofAU", // Paste the new key here
+  apiKey: "AIzaSyCHTM6Xut0hYcIh0GSTYAejPP98aCwofAU",
   authDomain: "gooues-bdd91.firebaseapp.com",
   projectId: "gooues-bdd91",
   storageBucket: "gooues-bdd91.appspot.com",
   messagingSenderId: "1095910317502",
-  appId: "1:1095910317502:web:c6f0e8c660964453642def", 
+  appId: "1:1095910317502:web:c6f0e8c660964453642def"
 };
-// ... rest of the file
-
-
 
 // --- Initialization ---
 // Initialize the Firebase app and get instances of the services we'll use.
@@ -148,3 +153,4 @@ export async function updateGame(gameId, newBoard, nextPlayer) {
         currentPlayer: nextPlayer
     });
 }
+

@@ -107,3 +107,5 @@ authenticatePlayer().then(user => {
 });
 
 console.log("firebase.js: Script execution FINISHED."); // New log
+
+export { db };

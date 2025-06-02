@@ -480,6 +480,19 @@ function findGroup(startRow, startCol, boardState) { const player = boardState[s
 // ... (getAIMove unchanged) ...
 function getAIMove() { let bestScore = -Infinity; let bestMoves = []; const availableMoves = []; for (let r = 0; r < BOARD_SIZE; r++) { for (let c = 0; c < BOARD_SIZE; c++) { if (board[r][c] === 0) availableMoves.push({ r, c }); } } if(availableMoves.length === 0) return {pass: true}; for (const move of availableMoves) { let score = 0; const simulationResult = simulatePlaceStone(move.r, move.c, 2, board.map(r => r.slice())); if (simulationResult === null) continue; const { newBoard: simBoard, captures: simCaptures } = simulationResult; score += simCaptures.length * 100; const neighbors = getNeighbors(move.r, move.c); for (const n of neighbors) { if (simBoard[n.row][n.col] === 1) { const group = findGroup(n.row, n.col, simBoard); if (group.liberties === 1) score += 25; else if (group.liberties === 2 && simCaptures.length === 0) score += 10; } } const aiOwnGroupAfterMove = findGroup(move.r, move.c, simBoard); if (aiOwnGroupAfterMove.liberties > 1) { for(const n of neighbors) { if(board[n.row][n.col] === 2) { const originalGroup = findGroup(n.row, n.col, board); if(originalGroup.liberties === 1) { const newFormedGroup = findGroup(n.row, n.col, simBoard); if(newFormedGroup.liberties > 1) score += 50; }}}} for (const n of neighbors) { if (simBoard[n.row][n.col] === 2) score += 1; } if (currentDifficulty !== 'easy') { const edgeDist = Math.min(move.r, move.c, BOARD_SIZE - 1 - move.r, BOARD_SIZE - 1 - move.c); if (edgeDist === 0) score += 3;  if (edgeDist <= 2) score += 1;  } if (score > bestScore) { bestScore = score; bestMoves = [move]; } else if (score === bestScore) bestMoves.push(move); } if (bestMoves.length > 0) return bestMoves[Math.floor(Math.random() * bestMoves.length)]; else return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : {pass: true};}
 
+// --- AI Turn Handler ---
+function aiTurn() {
+    // Only proceed if it's AI's turn and the game is not over
+    if (gameOver || gameMode !== 'ai' || currentPlayer !== 2) return;
+    const move = getAIMove();
+    if (move && !move.pass) {
+        handlePlayerMove(move.r, move.c);
+    } else {
+        // AI passes if no moves are available
+        handlePassTurn();
+    }
+}
+
 // =================================================================
 // Game Flow & UI (Unchanged)
 // =================================================================

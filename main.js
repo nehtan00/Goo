@@ -424,7 +424,9 @@ async function createMultiplayerGame() {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     try {
-        const gameRef = await db.collection('games').add(newGameData); activeGameId = gameRef.id;
+        const gamesCollection = collection(db, 'games');
+const gameRef = await addDoc(gamesCollection, newGameData);
+activeGameId = gameRef.id;
         initThreeJS(); updateStatusText("Waiting for opponent..."); closeModal(gameSetupModal);
         const shareCodeDisplay = document.getElementById('share-game-code-display');
         const shareLinkDisplay = document.getElementById('share-game-link-display');
@@ -454,10 +456,10 @@ async function joinMultiplayerGame(gameId) { /* ... unchanged ... */
 }
 function listenToGameUpdates(gameId) { /* ... with boardString parsing ... */
     if (unsubscribeGameListener) unsubscribeGameListener();
-    unsubscribeGameListener = db.collection('games').doc(gameId)
-        .onSnapshot(doc => {
-            if (!doc.exists) { updateStatusText("Game deleted."); resetGame(); return; }
-            const gameData = doc.data();
+    const gameDocRef = doc(db, 'games', gameId);
+    unsubscribeGameListener = onSnapshot(gameDocRef, docSnap => {
+            if (!docSnap.exists) { updateStatusText("Game deleted."); resetGame(); return; }
+            const gameData = docSnap.data();
             if (!renderer && !gameOver) initThreeJS();
             
             if (gameData.boardString) {
@@ -501,7 +503,8 @@ async function updateGameInFirebase(dataToUpdate) { /* ... with boardString stri
         delete dataToSend.board; 
     }
     try { 
-        await db.collection('games').doc(activeGameId).update(dataToSend); 
+        const gameDocRef = doc(db, 'games', activeGameId);
+        await updateDoc(gameDocRef, dataToSend);
     } catch (error) { 
         console.error("Firebase update error:", error);
         console.error("Data that caused update error:", dataToSend);

@@ -19,8 +19,8 @@ const BOARD_SIZE = 9;
 const PIECE_DEFINITIONS = {
     'Achilles':     { path: 'assets/achilles.glb',      scaleMultiplier: 2.0 },
     'War Elephant': { path: 'assets/war_elephant.glb',  scaleMultiplier: 1.0 }, // You'll likely want to adjust this
-    'Valkyrie':     { path: 'assets/valkyrie.glb',  scaleMultiplier: 1.0 },
-    'Aztec':        { path: 'assets/aztec.glb',         scaleMultiplier: 1.0 }
+    'Valkyrie':     { path: 'assets/valkyrie.glb',  scaleMultiplier: 1.3 },
+    'Aztec':        { path: 'assets/aztec.glb',         scaleMultiplier: 1.5 }
 };
 const DEFAULT_PIECE_KEY = 'Achilles'; // Fallback if a selected piece isn't in PIECE_DEFINITIONS
 
@@ -134,7 +134,7 @@ function initEventListeners() { /* ... unchanged ... */
     if(copyLinkBtn) copyLinkBtn.addEventListener('click', () => copyToClipboard(document.getElementById('share-game-link-display').value));
     if (logoImg) logoImg.addEventListener('click', () => {
         console.log("Logo clicked, restarting game.");
-        resetGame();
+       openModal(gameSetupModal);
     });
     console.log("main.js: initEventListeners() FINISHED.");
 }
@@ -233,7 +233,7 @@ function drawBoardGridLines() {
     // ... (drawBoardGridLines from previous version with corrected span) ...
     const lineThickness = 0.04; 
     const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.1, metalness: .8 }); 
-    const lineY = 0.025; 
+    const lineY = 0.001; 
     const gridLinesGroup = new THREE.Group();
     gridLinesGroup.position.y = lineY; 
     const gridSpan = BOARD_SIZE - 1;

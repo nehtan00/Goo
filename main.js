@@ -538,6 +538,10 @@ function listenToGameUpdates(gameId) {
         const gameData = docSnap.data();
         // Optionally, check if user is still a participant:
         const uid = auth.currentUser ? auth.currentUser.uid : null;
+        if (uid) {
+            if (gameData.player1 && gameData.player1.uid === uid) localPlayerNum = 1;
+            else if (gameData.player2 && gameData.player2.uid === uid) localPlayerNum = 2;
+        }
         if (uid && gameData.player1.uid !== uid && (!gameData.player2 || gameData.player2.uid !== uid)) {
             updateStatusText("You are no longer a participant in this game.");
             resetGame();
@@ -680,6 +684,55 @@ async function deleteCurrentGame() {
     } catch (error) {
         alert("Failed to delete game: " + error.message);
         console.error("Error deleting game:", error);
+    }
+}
+
+async function joinMultiplayerGame(gameId) {
+    if (!auth || !auth.currentUser) {
+        alert("You must be signed in to join a game.");
+        return;
+    }
+    resetGame();
+    const gameDocRef = doc(db, 'games', gameId);
+    try {
+        const docSnap = await getDoc(gameDocRef);
+        if (!docSnap.exists()) {
+            alert("Game not found.");
+            return;
+        }
+        const gameData = docSnap.data();
+        if (gameData.player2 && gameData.player2.uid !== auth.currentUser.uid) {
+            alert("Game is full.");
+            return;
+        }
+        if (gameData.player1.uid === auth.currentUser.uid) {
+            alert("Cannot join your own game.");
+            return;
+        }
+        localPlayerNum = 2;
+
+        // Show Player 2 setup modal
+        openModal(player2SetupModal);
+
+        // Remove previous listeners to avoid stacking
+        const newConfirmBtn = confirmJoinGameButton.cloneNode(true);
+        confirmJoinGameButton.parentNode.replaceChild(newConfirmBtn, confirmJoinGameButton);
+        confirmJoinGameButton = newConfirmBtn;
+
+        confirmJoinGameButton.onclick = async () => {
+            player2Settings.uid = auth.currentUser.uid;
+            player2Settings.color = player2ColorInput.value;
+            player2Settings.piece = player2PieceSelect.value;
+            await updateDoc(gameDocRef, { player2: player2Settings, status: 'active' });
+            activeGameId = gameId;
+            addActiveGameId(activeGameId);
+            listenToGameUpdates(activeGameId);
+            closeModal(player2SetupModal);
+            closeModal(joinGameModal);
+        };
+    } catch (error) {
+        alert("Failed to join game: " + error.message);
+        console.error("Error joining game:", error);
     }
 }
 

@@ -136,9 +136,10 @@ main {
 }
 
 #turn-text {
-    font-size: 0.95rem;
-    min-height: 1.2em; 
-    color: #5a4a3a;
+  font-weight: bold;
+  font-size: 1.2em;
+  margin-top: 0.5em;
+  color: #222;
 }
 
 /* --- NEW "ENGRAVED/RELIEF" BUTTON STYLES --- */

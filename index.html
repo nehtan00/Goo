@@ -54,7 +54,12 @@
 
     <!-- Footer Section -->
     <footer>
-        <p>&copy; <script>document.write(new Date().getFullYear())</script> Mythos Go. Inspired by Sea Harvest.</p>
+        <p>&copy; <span id="year"></span> Mythos Go. Inspired by Sea Harvest.</p>
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('year').textContent = new Date().getFullYear();
+          });
+        </script>
     </footer>
 
     <!-- Modals (structure remains the same) -->

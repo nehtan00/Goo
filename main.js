@@ -484,112 +484,47 @@ function startNewAIGame() {
     if (passTurnButton) passTurnButton.classList.remove('hidden');
     if(gameSetupModal) closeModal(gameSetupModal);
 }
-function handlePlayerMove(row, col) { const capturedStones = makeActualMove(row, col, currentPlayer); if (capturedStones !== null) { consecutivePasses = 0; addStoneTo3DScene(col, row, currentPlayer); if (capturedStones.length > 0) { captures[currentPlayer] += capturedStones.length; capturedStones.forEach(stone => removeStoneFrom3DScene(stone.col, stone.row)); updateScoreUI(); } currentPlayer = (currentPlayer === 1) ? 2 : 1; if (gameMode === 'multiplayer') updateGameInFirebase({ board, captures, currentPlayer, consecutivePasses, koState }); else { updateTurnText(); if (currentPlayer === 2) setTimeout(aiTurn, 500); } } else console.log("Illegal move attempted at " + row + "," + col); }
-function handlePassTurn() { if (gameOver || (gameMode === 'multiplayer' && currentPlayer !== localPlayerNum)) return; consecutivePasses++; if (consecutivePasses >= 2) { endGame(); if (gameMode === 'multiplayer') updateGameInFirebase({ gameOver: true, winner: determineWinner(), consecutivePasses }); } else { currentPlayer = (currentPlayer === 1) ? 2 : 1; if (gameMode === 'multiplayer') updateGameInFirebase({ currentPlayer, consecutivePasses }); else { updateTurnText(); if (currentPlayer === 2) setTimeout(aiTurn, 500); } } }
-function aiTurn() { if (gameOver) return; const move = getAIMove(); if(move.pass) handlePassTurn(); else handlePlayerMove(move.r, move.c); }
-function endGame() { gameOver = true; const winner = determineWinner(); if (winner === 0) updateStatusText("Game Over - It's a draw!"); else { const winnerName = (winner === localPlayerNum || (gameMode === 'ai' && winner === 1)) ? "You" : "Opponent"; updateStatusText(`Game Over - ${winnerName} won!`); } if(turnText) turnText.textContent = "Thank you for playing."; if(passTurnButton) passTurnButton.classList.add('hidden'); }
-function determineWinner() { if (captures[1] > captures[2]) return 1; if (captures[2] > captures[1]) return 2; return 0; }
-function updateScoreUI() { if(player1CapturesText) player1CapturesText.textContent = captures[1]; if(player2CapturesText) player2CapturesText.textContent = captures[2];}
-function updateStatusText(message) { if(statusText) statusText.textContent = message; }
-function updateTurnText() { if (gameOver) return; if (!turnText) return; if (gameMode === 'ai') turnText.textContent = currentPlayer === 1 ? "Your turn (Black)." : "AI's turn (White)..."; else if (gameMode === 'multiplayer' && activeGameId) turnText.textContent = currentPlayer === localPlayerNum ? "Your turn." : "Opponent's turn.";}
-
-// =================================================================
-// Multiplayer (Firebase)
-// =================================================================
-// ... (Multiplayer functions with Firebase nested array fix) ...
-async function createMultiplayerGame() {
-    console.log("createMultiplayerGame called");
-    if (!auth || !auth.currentUser) {
-        console.error("Auth not ready for createMultiplayerGame");
-        return;
-    }
-    console.log("Auth ready:", auth.currentUser.uid);
-    resetGame(); 
-    gameMode = 'multiplayer'; 
-    localPlayerNum = 1; 
-    gameOver = false;
-    console.log("playerColorInput:", playerColorInput, "playerPieceSelect:", playerPieceSelect);
-    player1Settings.uid = auth.currentUser.uid;
-    player1Settings.color = playerColorInput.value;
-    player1Settings.piece = playerPieceSelect.value; 
-    const newGameData = {
-        player1: player1Settings, player2: null,
-        boardString: JSON.stringify(board), 
-        captures, currentPlayer: 1, status: 'waiting', 
-        consecutivePasses: 0, koState: koState, 
-        createdAt: serverTimestamp()
-    };
-    console.log("newGameData:", newGameData);
-    try {
-        const gamesCollection = collection(db, 'games');
-        const gameRef = await addDoc(gamesCollection, newGameData);
-        activeGameId = gameRef.id;
-        addActiveGameId(activeGameId); // <-- updated
-        console.log("Game created with ID:", activeGameId);
-        initThreeJS(); updateStatusText("Waiting for opponent..."); closeModal(gameSetupModal);
-        const shareCodeDisplay = document.getElementById('share-game-code-display');
-        const shareLinkDisplay = document.getElementById('share-game-link-display');
-        if(shareCodeDisplay) shareCodeDisplay.value = activeGameId;
-        if(shareLinkDisplay) shareLinkDisplay.value = `${window.location.origin}${window.location.pathname}?game=${activeGameId}`;
-        openModal(shareGameModal); listenToGameUpdates(activeGameId);
-    } catch (error) { 
-        console.error("Error creating game:", error); 
-        console.error("Data that caused error in createMultiplayerGame:", newGameData);
+function handlePlayerMove(row, col) {
+    const capturedStones = makeActualMove(row, col, currentPlayer);
+    if (capturedStones !== null) {
+        consecutivePasses = 0;
+        addStoneTo3DScene(col, row, currentPlayer);
+        if (capturedStones.length > 0) {
+            captures[currentPlayer] += capturedStones.length;
+            capturedStones.forEach(stone => removeStoneFrom3DScene(stone.col, stone.row));
+            updateScoreUI();
+        }
+        currentPlayer = (currentPlayer === 1) ? 2 : 1;
+        updateTurnText(); // <-- Always update turn text after move
+        if (gameMode === 'multiplayer') {
+            updateGameInFirebase({ board, captures, currentPlayer, consecutivePasses, koState });
+        } else {
+            if (currentPlayer === 2) setTimeout(aiTurn, 500);
+        }
+    } else {
+        console.log("Illegal move attempted at " + row + "," + col);
     }
 }
-async function joinMultiplayerGame(gameId) {
-    if (!auth || !auth.currentUser) {
-        console.error("Auth not ready for joinMultiplayerGame");
-        return;
-    }
-    resetGame();
-    const gameDocRef = doc(db, 'games', gameId);
-    try {
-        const docSnap = await getDoc(gameDocRef);
-        if (!docSnap.exists()) {
-            alert("Game not found.");
-            return;
-        }
-        const gameData = docSnap.data();
-        if (gameData.player2 && gameData.player2.uid !== auth.currentUser.uid) {
-            alert("Game is full.");
-            return;
-        }
-        if (gameData.player1.uid === auth.currentUser.uid) {
-            alert("Cannot join your own game.");
-            return;
-        }
-        localPlayerNum = 2;
 
-        // Set default color to opposite of player 1, but allow override
-        if (player2ColorInput) {
-            player2ColorInput.value = (gameData.player1.color === '#FFFFFF') ? '#222222' : '#FFFFFF';
+function handlePassTurn() {
+    if (gameOver || (gameMode === 'multiplayer' && currentPlayer !== localPlayerNum)) return;
+    consecutivePasses++;
+    if (consecutivePasses >= 2) {
+        endGame();
+        if (gameMode === 'multiplayer') {
+            updateGameInFirebase({ gameOver: true, winner: determineWinner(), consecutivePasses });
         }
-
-        // Show Player 2 setup modal
-        openModal(player2SetupModal);
-
-        // Remove previous listeners to avoid stacking
-        const newConfirmBtn = confirmJoinGameButton.cloneNode(true);
-        confirmJoinGameButton.parentNode.replaceChild(newConfirmBtn, confirmJoinGameButton);
-        confirmJoinGameButton = newConfirmBtn;
-
-        confirmJoinGameButton.onclick = async () => {
-            player2Settings.uid = auth.currentUser.uid;
-            player2Settings.color = player2ColorInput.value;
-            player2Settings.piece = player2PieceSelect.value;
-            await updateDoc(gameDocRef, { player2: player2Settings, status: 'active' });
-            activeGameId = gameId;
-            addActiveGameId(activeGameId);
-            listenToGameUpdates(activeGameId);
-            closeModal(player2SetupModal);
-            closeModal(joinGameModal);
-        };
-    } catch (error) {
-        alert("Failed to join game: " + error.message);
-        console.error("Error joining game:", error);
+    } else {
+        currentPlayer = (currentPlayer === 1) ? 2 : 1;
+        updateTurnText(); // <-- Always update turn text after pass
+        if (gameMode === 'multiplayer') {
+            updateGameInFirebase({ currentPlayer, consecutivePasses });
+        } else {
+            if (currentPlayer === 2) setTimeout(aiTurn, 500);
+        }
     }
 }
+
 function listenToGameUpdates(gameId) {
     if (unsubscribeGameListener) unsubscribeGameListener();
     const gameDocRef = doc(db, 'games', gameId);
@@ -647,8 +582,10 @@ function listenToGameUpdates(gameId) {
         } else {
             gameOver = false; 
             if(passTurnButton) passTurnButton.classList.remove('hidden'); 
-            updateTurnText();
         }
+
+        updateTurnText(); // <-- Always update turn text after syncing state
+
         if (gameData.status === 'waiting' || gameData.status === 'active') {
             if (resignGameButton) resignGameButton.classList.remove('hidden');
         } else {
@@ -656,35 +593,16 @@ function listenToGameUpdates(gameId) {
         }
     }, error => { console.error("Firebase listener error:", error); updateStatusText("Connection error."); });
 }
-function sync3DAndUI() {
-    if (!prevBoard.length) prevBoard = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0));
-    for(let r=0; r<BOARD_SIZE; r++) {
-        for(let c=0; c<BOARD_SIZE; c++) {
-            if (board[r][c] !== prevBoard[r][c]) {
-                // Remove old stone if present
-                if (prevBoard[r][c] !== 0) removeStoneFrom3DScene(c, r);
-                // Add new stone if present
-                if (board[r][c] !== 0) addStoneTo3DScene(c, r, board[r][c]);
-            }
-        }
-    }
-    prevBoard = board.map(row => row.slice());
-    updateScoreUI();
-}
-async function updateGameInFirebase(dataToUpdate) { /* ... with boardString stringification ... */
-    if (!activeGameId || !auth || !auth.currentUser) return;
-    const dataToSend = { ...dataToUpdate }; 
-    if (dataToSend.hasOwnProperty('board')) {
-        dataToSend.boardString = JSON.stringify(dataToSend.board);
-        delete dataToSend.board; 
-    }
-    try { 
-        const gameDocRef = doc(db, 'games', activeGameId);
-        await updateDoc(gameDocRef, dataToSend);
-    } catch (error) { 
-        console.error("Firebase update error:", error);
-        console.error("Data that caused update error:", dataToSend);
-    }
+
+function updateTurnText() {
+    if (gameOver) return;
+    if (!turnText) return;
+    if (gameMode === 'ai')
+        turnText.textContent = currentPlayer === 1 ? "Your turn (Black)." : "AI's turn (White)...";
+    else if (gameMode === 'multiplayer' && activeGameId)
+        turnText.textContent = currentPlayer === localPlayerNum ? "Your turn." : "Opponent's turn.";
+    else
+        turnText.textContent = "";
 }
 
 // --- Utility Functions ---

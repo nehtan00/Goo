@@ -1,5 +1,5 @@
 // =================================================================
-// Mythos Go - main.js (Firebase Nested Array Fix & Visual Polish)
+// Mythos Go - main.js (Individual Piece Scaling)
 // =================================================================
 
 // --- ES6 Module Imports ---
@@ -12,15 +12,19 @@ console.log("main.js: SCRIPT EXECUTION STARTED (TOP OF FILE).");
 
 // --- Constants ---
 const BOARD_SIZE = 9;
-const PIECE_MODEL_PATHS = {
-    'Achilles': 'assets/achilles.glb',
-    'War Elephant': 'assets/war_elephant.glb',
-    'Valkyrie': 'assets/valkyrie.glb',
-    'Aztec': 'assets/aztec.glb'
-};
-const DEFAULT_PIECE_KEY = 'Achilles';
 
-// **USING YOUR SPECIFIED PBR TEXTURE PATHS**
+// **NEW: PIECE DEFINITIONS with individual scale multipliers**
+// You will need to adjust the `scaleMultiplier` for each piece
+// to get the visual balance you want. 1.0 is the baseline.
+const PIECE_DEFINITIONS = {
+    'Achilles':     { path: 'assets/achilles.glb',      scaleMultiplier: 1.0 },
+    'War Elephant': { path: 'assets/war_elephant.glb',  scaleMultiplier: 1.0 }, // You'll likely want to adjust this
+    'Knight Horse': { path: 'assets/knight_horse.glb',  scaleMultiplier: 1.0 },
+    'Aztec':        { path: 'assets/aztec.glb',         scaleMultiplier: 1.0 }
+};
+const DEFAULT_PIECE_KEY = 'Achilles'; // Fallback if a selected piece isn't in PIECE_DEFINITIONS
+
+// PBR TEXTURE PATHS FOR THE BOARD (ensure these are correct)
 const MARBLE_ALBEDO_PATH = 'assets/marble_albedo.png';    
 const MARBLE_ROUGHNESS_PATH = 'assets/marble_roughness.png'; 
 const MARBLE_NORMAL_PATH = 'assets/marble_normal.png';    
@@ -28,19 +32,23 @@ const MARBLE_AO_PATH = 'assets/marble_ao.png';
 const MARBLE_DISPLACEMENT_PATH = 'assets/marble_displacement.png'; 
 
 // --- Global DOM Element Variables ---
+// ... (declarations remain the same)
 let gameContainer, statusText, turnText, player1CapturesText, player2CapturesText;
 let newGameButton, joinGameButton, passTurnButton, rulesStrategyButton;
 let gameSetupModal, joinGameModal, shareGameModal, rulesStrategyModal;
 let playerColorInput, playerPieceSelect, difficultySelect;
 let startAiGameButton, createMultGameButton, joinGameCodeInput, joinMultGameButton;
+let logoImg; // Add this to your global DOM variables
 
 // --- Three.js Variables ---
+// ... (declarations remain the same)
 let scene, camera, renderer, raycaster, mouse, controls;
 let boardMesh; 
 let stoneModels = {};
 
 // --- Game State Variables ---
-let board = []; // This will be the 2D array for game logic
+// ... (declarations remain the same)
+let board = [];
 let currentPlayer = 1;
 let gameMode = null;
 let currentDifficulty = 'easy'; 
@@ -50,7 +58,7 @@ let localPlayerNum = 0;
 let unsubscribeGameListener = null;
 let consecutivePasses = 0;
 let captures = { 1: 0, 2: 0 };
-let koState = null; // Will store string representation of board state for Ko
+let koState = null; 
 
 let player1Settings = { uid: null, color: '#222222', piece: DEFAULT_PIECE_KEY };
 let player2Settings = { uid: null, color: '#FFFFFF', piece: DEFAULT_PIECE_KEY };
@@ -59,6 +67,7 @@ let player2Settings = { uid: null, color: '#FFFFFF', piece: DEFAULT_PIECE_KEY };
 // =================================================================
 // Initial Setup
 // =================================================================
+// ... (DOMContentLoaded, assignDOMElements, initEventListeners, waitForAuthAndSetupUI, checkUrlForGameToJoin remain the same)
 document.addEventListener('DOMContentLoaded', () => {
     console.log("main.js: DOMContentLoaded event FIRED.");
     try {
@@ -96,6 +105,7 @@ function assignDOMElements() { /* ... unchanged ... */
     createMultGameButton = document.getElementById('create-mult-game-button');
     joinGameCodeInput = document.getElementById('join-game-code-input');
     joinMultGameButton = document.getElementById('join-mult-game-button');
+    logoImg = document.getElementById('logo-img');
     if (!newGameButton) console.error("main.js: newGameButton NOT FOUND in assignDOMElements!");
     if (!gameContainer) console.error("main.js: gameContainer NOT FOUND in assignDOMElements!");
     console.log("main.js: assignDOMElements() FINISHED.");
@@ -122,6 +132,10 @@ function initEventListeners() { /* ... unchanged ... */
     const copyLinkBtn = document.getElementById('copy-link-button');
     if(copyCodeBtn) copyCodeBtn.addEventListener('click', () => copyToClipboard(document.getElementById('share-game-code-display').value));
     if(copyLinkBtn) copyLinkBtn.addEventListener('click', () => copyToClipboard(document.getElementById('share-game-link-display').value));
+    if (logoImg) logoImg.addEventListener('click', () => {
+        console.log("Logo clicked, restarting game.");
+        resetGame();
+    });
     console.log("main.js: initEventListeners() FINISHED.");
 }
 function waitForAuthAndSetupUI() { /* ... unchanged ... */ 
@@ -150,9 +164,7 @@ function checkUrlForGameToJoin() { /* ... unchanged ... */
 // =================================================================
 // 3D Scene
 // =================================================================
-
-
-function initThreeJS() {
+function initThreeJS() { /* ... Lighting and Renderer setup unchanged ... */
     console.log("main.js: initThreeJS() CALLED.");
     if (!gameContainer) { console.error("main.js: gameContainer not found for Three.js."); return; }
     gameContainer.innerHTML = ''; stoneModels = {};
@@ -163,50 +175,27 @@ function initThreeJS() {
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.4; // Your current exposure setting
+    renderer.toneMappingExposure = 0.9; 
     renderer.outputEncoding = THREE.sRGBEncoding;
     gameContainer.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement); 
     controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2); controls.enableDamping = true;
     controls.dampingFactor = 0.05; controls.minDistance = BOARD_SIZE * 0.7; controls.maxDistance = BOARD_SIZE * 2.5;
     controls.maxPolarAngle = Math.PI / 2 - 0.02; 
-    
-    // Your Candlelight Color Setup
-    const candlelight = 0xffd580; 
-    const groundColor = 0x402808; 
-    const hemiLight = new THREE.HemisphereLight(candlelight, groundColor, 0.8); 
-    hemiLight.position.set(0, 20, 0); 
-    scene.add(hemiLight);
-    
-    const dirLight = new THREE.DirectionalLight(candlelight, 0.7); 
-    dirLight.position.set(10, 15, 12); 
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048; 
-    dirLight.shadow.mapSize.height = 2048; 
-
-    // ** NEW: Shadow Camera properties for dirLight to expand "beam" **
-    const shadowCamSize = BOARD_SIZE * 1.5; // Adjust this multiplier to change beam size (e.g., 1.5, 2.0, 2.5)
-    dirLight.shadow.camera.near = 0.5;    
-    dirLight.shadow.camera.far = 50;      
-    dirLight.shadow.camera.left = -shadowCamSize / 2;
-    dirLight.shadow.camera.right = shadowCamSize / 2;
-    dirLight.shadow.camera.top = shadowCamSize / 2;
-    dirLight.shadow.camera.bottom = -shadowCamSize / 2;
-    // dirLight.shadow.camera.updateProjectionMatrix(); // Usually not needed if set before first render
-
-    scene.add(dirLight);
-
-    const fillLight = new THREE.DirectionalLight(candlelight, 0.3); 
-    fillLight.position.set(-10, 10, -5);
-    scene.add(fillLight);
-    
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0); 
+    hemiLight.position.set(0, 20, 0); scene.add(hemiLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);  
+    dirLight.position.set(10, 15, 12); dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; scene.add(dirLight);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.4); 
+    fillLight.position.set(-10, 10, -5); scene.add(fillLight);
     createFloatingGridBoard(); 
     raycaster = new THREE.Raycaster(); mouse = new THREE.Vector2();
     if (gameContainer) gameContainer.addEventListener('click', onBoardClick, false);
     animate();
 }
 
-function createFloatingGridBoard() { /* ... PBR texture loading from previous version ... */
+function createFloatingGridBoard() { /* ... PBR texture loading unchanged ... */
     console.log("main.js: createFloatingGridBoard() called.");
     const boardThickness = 0.7; 
     const boardRadius = 0.25; 
@@ -231,8 +220,8 @@ function createFloatingGridBoard() { /* ... PBR texture loading from previous ve
         if (map) { map.wrapS = map.wrapT = THREE.RepeatWrapping; map.repeat.set(1, 1); map.anisotropy = renderer.capabilities.getMaxAnisotropy(); }
     });
     const boardMat = new THREE.MeshStandardMaterial({ 
-        map: albedoMap, roughnessMap: roughnessMap, normalMap: normalMap, aoMap: aoMap, aoMapIntensity: 0.8, 
-        displacementMap: displacementMap, displacementScale: 0.09, roughness: 0.1, metalness: 0.4,
+        map: albedoMap, roughnessMap: roughnessMap, normalMap: normalMap, aoMap: aoMap, aoMapIntensity: 0.6, 
+        displacementMap: displacementMap, displacementScale: 0.01, roughness: 0.5, metalness: 0.0,
     });
     boardMesh = new THREE.Mesh(boardGeom, boardMat);
     boardMesh.position.set((BOARD_SIZE - 1) / 2, -boardThickness / 2, (BOARD_SIZE - 1) / 2);
@@ -241,26 +230,21 @@ function createFloatingGridBoard() { /* ... PBR texture loading from previous ve
 }
 
 function drawBoardGridLines() {
-    const lineThickness = 0.035; 
-    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.85, metalness: .9 }); 
-    const lineY = 0.05; 
+    // ... (drawBoardGridLines from previous version with corrected span) ...
+    const lineThickness = 0.04; 
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.1, metalness: 1 }); 
+    const lineY = 0.03; 
     const gridLinesGroup = new THREE.Group();
     gridLinesGroup.position.y = lineY; 
-    
-    // Grid lines should span from 0 to BOARD_SIZE-1 (which is a length of BOARD_SIZE-1)
     const gridSpan = BOARD_SIZE - 1;
-
-    for (let i = 0; i < BOARD_SIZE; i++) { // i goes from 0 to 8 for a 9-line grid
-        // Horizontal lines (run along X-axis, at Z = i)
-        const hGeom = new THREE.BoxGeometry(gridSpan, lineThickness, lineThickness); // Correct length
+    for (let i = 0; i < BOARD_SIZE; i++) {
+        const hGeom = new THREE.BoxGeometry(gridSpan, lineThickness, lineThickness);
         const hLine = new THREE.Mesh(hGeom, gridLineMaterial);
-        hLine.position.set(gridSpan / 2, 0, i); // Centered correctly
+        hLine.position.set(gridSpan / 2, 0, i); 
         gridLinesGroup.add(hLine);
-
-        // Vertical lines (run along Z-axis, at X = i)
-        const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, gridSpan); // Correct length
+        const vGeom = new THREE.BoxGeometry(lineThickness, lineThickness, gridSpan);
         const vLine = new THREE.Mesh(vGeom, gridLineMaterial);
-        vLine.position.set(i, 0, gridSpan / 2); // Centered correctly
+        vLine.position.set(i, 0, gridSpan / 2);
         gridLinesGroup.add(vLine);
     }
     scene.add(gridLinesGroup);
@@ -269,11 +253,15 @@ function drawBoardGridLines() {
 
 function addStoneTo3DScene(x, z, player) { 
     const key = `${x}-${z}`; if (stoneModels[key]) return;
-    const settings = player === 1 ? player1Settings : player2Settings;
-    const modelPath = PIECE_MODEL_PATHS[settings.piece] || PIECE_MODEL_PATHS[DEFAULT_PIECE_KEY];
     
-    const pieceTargetHeight = 1.3; // **Desired final height of the piece on the board**
-    const pieceYOnBoard = 0.8;    // Y for piece BASE, clearly on top of grid lines
+    const playerSettings = player === 1 ? player1Settings : player2Settings;
+    const pieceDefinition = PIECE_DEFINITIONS[playerSettings.piece] || PIECE_DEFINITIONS[DEFAULT_PIECE_KEY];
+    const modelPath = pieceDefinition.path;
+    // **USE PIECE-SPECIFIC SCALE MULTIPLIER**
+    const pieceSpecificScaleMultiplier = pieceDefinition.scaleMultiplier || 1.0; 
+
+    const targetVisualPieceHeight = 0.7; // Base height all pieces are scaled relative to
+    const pieceYOnBoard = 0.07;    // Final Y for piece BASE, clearly on top of grid lines
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {
@@ -283,38 +271,35 @@ function addStoneTo3DScene(x, z, player) {
         
         if (initialSize.y === 0) { 
             console.error("Loaded model has zero initial height:", modelPath, initialSize);
-            model.scale.set(0.5,0.5,0.5); // Apply a default small scale if model is flat
+            model.scale.set(0.5 * pieceSpecificScaleMultiplier, 0.5 * pieceSpecificScaleMultiplier, 0.5 * pieceSpecificScaleMultiplier); 
         } else {
-            const scaleFactor = pieceTargetHeight / initialSize.y; // Scale based on Y to achieve target height
-            model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            // Calculate scale factor to achieve the targetVisualPieceHeight, then apply piece-specific multiplier
+            const scaleToTargetHeight = targetVisualPieceHeight / initialSize.y;
+            const finalScale = scaleToTargetHeight * pieceSpecificScaleMultiplier;
+            model.scale.set(finalScale, finalScale, finalScale);
         }
         
         const newScaledBox = new THREE.Box3().setFromObject(model);
-        // Shift model so its visual base (min.y of its bounding box after scaling) 
-        // aligns with its local y=0 origin.
-        model.position.y -= newScaledBox.min.y; 
+        model.position.y -= newScaledBox.min.y; // Align model's visual base to its local y=0
         
-        // Now, also center its X and Z based on its bounding box for precise grid placement
         const centerOffset = newScaledBox.getCenter(new THREE.Vector3());
-        model.position.x -= centerOffset.x;
-        model.position.z -= centerOffset.z;
+        model.position.x -= centerOffset.x; // Center X
+        model.position.z -= centerOffset.z; // Center Z
         
         const animationStartY = pieceYOnBoard + 1.5; 
-        // Place the model's local origin (now its visual base-center) at the grid intersection (x, z)
-        // and the starting Y height for animation.
         model.position.set(x, animationStartY, z); 
 
-        // console.log(`Piece: ${settings.piece} Grid(${x},${z}) TargetH: ${pieceTargetHeight} ScaleF: ${model.scale.x.toFixed(3)} FinalYBase: ${pieceYOnBoard}`);
+        console.log(`Piece: ${playerSettings.piece} Grid(${x},${z}) TargetH: ${targetVisualPieceHeight} SpecificScale: ${pieceSpecificScaleMultiplier} FinalCalculatedScale: ${model.scale.x.toFixed(3)} TargetYBase: ${pieceYOnBoard}`);
 
         model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true;
             child.material = new THREE.MeshStandardMaterial({
-                color: new THREE.Color(settings.color), 
+                color: new THREE.Color(playerSettings.color), 
                 roughness: 0.2, metalness: 0.25 }); 
         }});
         scene.add(model); stoneModels[key] = model;
         
         let currentY = model.position.y; 
-        const targetY = pieceYOnBoard; // The model's local origin (now its base) should land here
+        const targetY = pieceYOnBoard; 
         const dropSpeed = 0.10; 
 
         function animateDrop() { /* ... unchanged ... */ }
@@ -328,10 +313,12 @@ function addStoneTo3DScene(x, z, player) {
         }
     }, undefined, error => { /* ... fallback code unchanged ... */ 
         console.error(`Model load error for ${modelPath}:`, error);
-        const stoneRadius = 0.3 * (pieceTargetHeight / 0.15); 
-        const stoneHeight = 0.1 * (pieceTargetHeight / 0.15);
+        const fallbackScale = 0.3 * pieceSpecificScaleMultiplier * (targetVisualPieceHeight / 0.15);
+        const stoneHeight = 0.1 * pieceSpecificScaleMultiplier * (targetVisualPieceHeight / 0.15); // Keep this small for fallback
+        const stoneRadius = fallbackScale;
+
         const geom = new THREE.CylinderGeometry(stoneRadius, stoneRadius, stoneHeight, 24);
-        const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(settings.color), roughness: 0.5, metalness: 0.1 });
+        const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(playerSettings.color), roughness: 0.5, metalness: 0.1 });
         const piece = new THREE.Mesh(geom, mat); piece.castShadow = true; 
         piece.position.set(x, pieceYOnBoard + 1.5, z);
         scene.add(piece); stoneModels[key] = piece;
@@ -422,9 +409,9 @@ async function createMultiplayerGame() {
     player1Settings.piece = playerPieceSelect.value; 
     const newGameData = {
         player1: player1Settings, player2: null,
-        boardString: JSON.stringify(board), // Store board as a JSON string
+        boardString: JSON.stringify(board), 
         captures, currentPlayer: 1, status: 'waiting', 
-        consecutivePasses: 0, koState: koState, // koState is already a string or null
+        consecutivePasses: 0, koState: koState, 
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     try {
@@ -504,7 +491,6 @@ async function updateGameInFirebase(dataToUpdate) { /* ... with boardString stri
         dataToSend.boardString = JSON.stringify(dataToSend.board);
         delete dataToSend.board; 
     }
-    // koState is already a string or null from our game logic.
     try { 
         await db.collection('games').doc(activeGameId).update(dataToSend); 
     } catch (error) { 

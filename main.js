@@ -81,6 +81,12 @@ document.addEventListener('DOMContentLoaded', () => {
         initEventListeners(); 
         waitForAuthAndSetupUI();
         window.addEventListener('resize', onWindowResize, false);
+        // Offer to resume AI game if present
+        if (loadAIGameFromLocal()) {
+            // Optionally, you can prompt the user instead:
+            // if (confirm("Resume your previous AI game?")) loadAIGameFromLocal();
+            // else clearAIGameFromLocal();
+        }
         console.log("main.js: Initial setup within DOMContentLoaded COMPLETED.");
     } catch (error) {
         console.error("main.js: ERROR during initial setup inside DOMContentLoaded:", error);
@@ -511,7 +517,8 @@ function resetGame() {
     if(turnText) turnText.textContent = "";
     if (passTurnButton) passTurnButton.classList.add('hidden'); else console.error("Pass turn button not found in resetGame");
     if (resignGameButton) resignGameButton.classList.add('hidden');
-    removeActiveGameId(); // <-- Add this line
+    removeActiveGameId();
+    clearAIGameFromLocal(); // <-- Add this line
 }
 function startNewAIGame() {
     console.log("startNewAIGame CALLED");
@@ -541,10 +548,11 @@ function handlePlayerMove(row, col) {
             updateScoreUI();
         }
         currentPlayer = (currentPlayer === 1) ? 2 : 1;
-        updateTurnText(); // <-- Always update turn text after move
+        updateTurnText();
         if (gameMode === 'multiplayer') {
             updateGameInFirebase({ board, captures, currentPlayer, consecutivePasses, koState });
         } else {
+            saveAIGameToLocal(); // <-- Add this line
             if (currentPlayer === 2) setTimeout(aiTurn, 500);
         }
     } else {
@@ -560,13 +568,17 @@ function handlePassTurn() {
         if (gameMode === 'multiplayer') {
             updateGameInFirebase({ gameOver: true, winner: determineWinner(), consecutivePasses });
         }
+        if (gameMode === 'ai') {
+            saveAIGameToLocal();
+        }
     } else {
         currentPlayer = (currentPlayer === 1) ? 2 : 1;
-        updateTurnText(); // <-- Always update turn text after pass
+        updateTurnText();
         if (gameMode === 'multiplayer') {
             updateGameInFirebase({ currentPlayer, consecutivePasses });
         } else {
-            if (currentPlayer === 2) setTimeout(aiTurn, 500);
+            saveAIGameToLocal(); // <-- Add this line
+            if (currentPlayer === 2 && !gameOver) setTimeout(aiTurn, 500);
         }
     }
 }
@@ -883,4 +895,54 @@ async function createMultiplayerGame() {
     }
 }
 
+// =================================================================
+// AI Game State Management (FIXED)
+// =================================================================
+function saveAIGameToLocal() {
+    if (gameMode === 'ai') {
+        localStorage.setItem('aiGameState', JSON.stringify({
+            board,
+            captures,
+            currentPlayer,
+            consecutivePasses,
+            player1Settings,
+            player2Settings,
+            gameOver,
+            koState,
+            currentDifficulty
+        }));
+    }
+}
+
+function loadAIGameFromLocal() {
+    const data = localStorage.getItem('aiGameState');
+    if (data) {
+        try {
+            const state = JSON.parse(data);
+            board = state.board;
+            captures = state.captures;
+            currentPlayer = state.currentPlayer;
+            consecutivePasses = state.consecutivePasses;
+            player1Settings = state.player1Settings;
+            player2Settings = state.player2Settings;
+            gameOver = state.gameOver;
+            koState = state.koState;
+            currentDifficulty = state.currentDifficulty || 'easy';
+            gameMode = 'ai';
+            initThreeJS();
+            updateScoreUI();
+            updateTurnText();
+            updateStatusText(`Resumed AI game (${currentDifficulty}).`);
+            if (passTurnButton) passTurnButton.classList.remove('hidden');
+            return true;
+        } catch (e) {
+            console.warn("Failed to load AI game from localStorage:", e);
+        }
+    }
+    return false;
+}
+
+function clearAIGameFromLocal() {
+    localStorage.removeItem('aiGameState');
+}
 console.log("main.js: SCRIPT EXECUTION FINISHED (END OF FILE).");

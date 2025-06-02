@@ -178,11 +178,25 @@ function waitForAuthAndSetupUI() {
         if(statusText) statusText.textContent = "Error: Auth services unavailable.";
     }
 }
-function checkUrlForGameToJoin() { /* ... unchanged ... */ 
+async function checkUrlForGameToJoin() {
     console.log("main.js: checkUrlForGameToJoin() called.");
     const urlParams = new URLSearchParams(window.location.search);
     const gameIdFromUrl = urlParams.get('game');
-    if (gameIdFromUrl && joinGameModal && joinGameCodeInput) { 
+    if (gameIdFromUrl && joinGameModal && joinGameCodeInput) {
+        // Check if the current user is already player1 for this game
+        const gameDocRef = doc(db, 'games', gameIdFromUrl);
+        try {
+            const docSnap = await getDoc(gameDocRef);
+            if (docSnap.exists()) {
+                const gameData = docSnap.data();
+                if (auth.currentUser && gameData.player1 && gameData.player1.uid === auth.currentUser.uid) {
+                    // Don't open join modal if user is player1
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn("Error checking game ownership in checkUrlForGameToJoin:", e);
+        }
         joinGameCodeInput.value = gameIdFromUrl;
         openModal(joinGameModal);
         if(statusText) statusText.textContent = `Attempting to join game: ${gameIdFromUrl}`;

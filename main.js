@@ -18,9 +18,9 @@ const BOARD_SIZE = 9;
 // to get the visual balance you want. 1.0 is the baseline.
 const PIECE_DEFINITIONS = {
     'Achilles':     { path: 'assets/achilles.glb',      scaleMultiplier: 2.0 },
-    'War Elephant': { path: 'assets/war_elephant.glb',  scaleMultiplier: 1.8 }, // You'll likely want to adjust this
+    'War Elephant': { path: 'assets/war_elephant.glb',  scaleMultiplier: 1.6 }, // You'll likely want to adjust this
     'Valkyrie':     { path: 'assets/valkyrie.glb',  scaleMultiplier: 1.3 },
-    'Aztec':        { path: 'assets/aztec.glb',         scaleMultiplier: 1.9 }
+    'Aztec':        { path: 'assets/aztec.glb',         scaleMultiplier: 1.4 }
 };
 const DEFAULT_PIECE_KEY = 'Achilles'; // Fallback if a selected piece isn't in PIECE_DEFINITIONS
 
@@ -255,7 +255,7 @@ function createFloatingGridBoard() { /* ... PBR texture loading unchanged ... */
 function drawBoardGridLines() {
     // ... (drawBoardGridLines from previous version with corrected span) ...
     const lineThickness = 0.05; 
-    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.6, metalness: 0.7 }); 
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.9, metalness: 0.9 }); 
     const lineY = 0.001; 
     const gridLinesGroup = new THREE.Group();
     gridLinesGroup.position.y = lineY; 

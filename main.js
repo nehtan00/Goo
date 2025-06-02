@@ -18,7 +18,7 @@ const BOARD_SIZE = 9;
 // to get the visual balance you want. 1.0 is the baseline.
 const PIECE_DEFINITIONS = {
     'Achilles':     { path: 'assets/achilles.glb',      scaleMultiplier: 2.0 },
-    'War Elephant': { path: 'assets/war_elephant.glb',  scaleMultiplier: 3.0 }, // You'll likely want to adjust this
+    'War Elephant': { path: 'assets/war_elephant.glb',  scaleMultiplier: 2.0 }, // You'll likely want to adjust this
     'Valkyrie':     { path: 'assets/valkyrie.glb',  scaleMultiplier: 1.3 },
     'Aztec':        { path: 'assets/aztec.glb',         scaleMultiplier: 1.9 }
 };
@@ -186,18 +186,18 @@ function initThreeJS() {
     // Your Candlelight Color Setup
     const candlelight = 0xffd580; 
     const groundColor = 0x402808; 
-    const hemiLight = new THREE.HemisphereLight(candlelight, groundColor, 0.8); 
+    const hemiLight = new THREE.HemisphereLight(candlelight, groundColor, 1.5); 
     hemiLight.position.set(0, 20, 0); 
     scene.add(hemiLight);
     
-    const dirLight = new THREE.DirectionalLight(candlelight, 0.7); 
+    const dirLight = new THREE.DirectionalLight(candlelight, 0.4); 
     dirLight.position.set(10, 15, 12); 
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048; 
     dirLight.shadow.mapSize.height = 2048; 
 
     // ** NEW: Shadow Camera properties for dirLight to expand "beam" **
-    const shadowCamSize = BOARD_SIZE * 3.5; // Adjust this multiplier to change beam size (e.g., 1.5, 2.0, 2.5)
+    const shadowCamSize = BOARD_SIZE * 10.5; // Adjust this multiplier to change beam size (e.g., 1.5, 2.0, 2.5)
     dirLight.shadow.camera.near = 0.5;    
     dirLight.shadow.camera.far = 50;      
     dirLight.shadow.camera.left = -shadowCamSize / 2;

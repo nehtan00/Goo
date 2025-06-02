@@ -182,7 +182,11 @@ function waitForAuthAndSetupUI() {
     }
 }
 async function checkUrlForGameToJoin() {
-    console.log("main.js: checkUrlForGameToJoin() called.");
+    // Wait for auth before trying to join
+    if (!auth || !auth.currentUser) {
+        console.warn("checkUrlForGameToJoin: auth.currentUser not ready, skipping.");
+        return;
+    }
     const urlParams = new URLSearchParams(window.location.search);
     const gameIdFromUrl = urlParams.get('game');
     if (gameIdFromUrl && joinGameModal && joinGameCodeInput) {

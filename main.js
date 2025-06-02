@@ -313,13 +313,16 @@ function addStoneTo3DScene(x, z, player) {
         }
         model.scale.set(finalScale, finalScale, finalScale);
 
+        // --- ORIENT PIECE TO FACE OPPONENT ---
+        // If this piece is NOT the local player's, rotate it 180° around Y
+        if (gameMode === 'multiplayer' && player !== localPlayerNum) {
+            model.rotation.y = Math.PI;
+        }
+
         // --- ALIGN BASE TO Y=0 AND CENTER X/Z ---
-        // Recompute bounding box after scaling
         const scaledBox = new THREE.Box3().setFromObject(model);
         const size = scaledBox.getSize(new THREE.Vector3());
         const center = scaledBox.getCenter(new THREE.Vector3());
-
-        // Move model so its base is at y=0 and it's centered in X/Z
         model.position.x += (x - center.x);
         model.position.z += (z - center.z);
         model.position.y += (0 - scaledBox.min.y) + pieceYOnBoard;

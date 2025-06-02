@@ -42,7 +42,8 @@ let playerColorInput, playerPieceSelect, difficultySelect;
 let startAiGameButton, createMultGameButton, joinGameCodeInput, joinMultGameButton;
 let logoImg; // Add this to your global DOM variables
 let player2SetupModal, player2ColorInput, player2PieceSelect, confirmJoinGameButton;
-let resignGameButton;
+let resignGameButton, manageGamesButton;
+
 
 // --- Three.js Variables ---
 // ... (declarations remain the same)
@@ -116,6 +117,7 @@ function assignDOMElements() { /* ... unchanged ... */
     player2PieceSelect = document.getElementById('player2-piece-select');
     confirmJoinGameButton = document.getElementById('confirm-join-game-button');
     resignGameButton = document.getElementById('resign-game-button');
+    manageGamesButton = document.getElementById('manage-games-button');
     if (!newGameButton) console.error("main.js: newGameButton NOT FOUND in assignDOMElements!");
     if (!gameContainer) console.error("main.js: gameContainer NOT FOUND in assignDOMElements!");
     if (!startAiGameButton) console.error("main.js: startAiGameButton NOT FOUND in assignDOMElements!");
@@ -155,6 +157,7 @@ function initEventListeners() { /* ... unchanged ... */
        openModal(gameSetupModal);
     });
     if (resignGameButton) resignGameButton.addEventListener('click', deleteCurrentGame);
+    if (manageGamesButton) manageGamesButton.addEventListener('click', showGamePicker);
     console.log("main.js: initEventListeners() FINISHED.");
 }
 function waitForAuthAndSetupUI() {
@@ -752,7 +755,12 @@ async function joinMultiplayerGame(gameId) {
             return;
         }
         if (gameData.player1.uid === auth.currentUser.uid) {
-            alert("Cannot join your own game.");
+            // Allow player1 to rejoin/manage their own game!
+            localPlayerNum = 1;
+            activeGameId = gameId;
+            addActiveGameId(activeGameId);
+            listenToGameUpdates(activeGameId);
+            closeModal(joinGameModal);
             return;
         }
         localPlayerNum = 2;

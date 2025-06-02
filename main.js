@@ -281,7 +281,7 @@ function addStoneTo3DScene(x, z, player) {
     const modelPath = pieceDefinition.path;
     const pieceSpecificScaleMultiplier = pieceDefinition.scaleMultiplier || 1.0; 
     const targetVisualPieceHeight = 0.7;
-    const pieceYOnBoard = 0.03;
+    const pieceYOnBoard = 0.15;
 
     const loader = new GLTFLoader(); 
     loader.load(modelPath, gltf => {

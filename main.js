@@ -799,8 +799,35 @@ async function joinMultiplayerGame(gameId) {
             closeModal(joinGameModal);
             return;
         }
-        if (gameData.player2) {
-            alert("Game is full.");
+        if (!gameData.player2) {
+            // Show Player 2 setup modal
+            openModal(player2SetupModal);
+
+            // Remove previous listeners to avoid stacking
+            const newConfirmBtn = confirmJoinGameButton.cloneNode(true);
+            confirmJoinGameButton.parentNode.replaceChild(newConfirmBtn, confirmJoinGameButton);
+            confirmJoinGameButton = newConfirmBtn;
+
+            confirmJoinGameButton.onclick = async () => {
+                player2Settings.uid = auth.currentUser.uid;
+                player2Settings.color = player2ColorInput ? player2ColorInput.value : '#FFFFFF';
+                player2Settings.piece = player2PieceSelect ? player2PieceSelect.value : DEFAULT_PIECE_KEY;
+                try {
+                    await updateDoc(gameDocRef, {
+                        player2: player2Settings,
+                        status: 'active'
+                    });
+                    localPlayerNum = 2;
+                    activeGameId = gameId;
+                    addActiveGameId(activeGameId);
+                    listenToGameUpdates(activeGameId);
+                    closeModal(player2SetupModal);
+                    closeModal(joinGameModal);
+                } catch (error) {
+                    alert("Failed to join as Player 2: " + error.message);
+                    console.error("Error joining as Player 2:", error);
+                }
+            };
             return;
         }
     } catch (error) {

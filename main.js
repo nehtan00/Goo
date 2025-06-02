@@ -521,6 +521,7 @@ async function joinMultiplayerGame(gameId) {
         listenToGameUpdates(activeGameId);
         closeModal(joinGameModal);
     } catch (error) {
+        alert("Failed to join game: " + error.message);
         console.error("Error joining game:", error);
     }
 }

@@ -438,7 +438,15 @@ function removeStoneFrom3DScene(x, z) {
     }
 }
 function onBoardClick(event) {
-    if (gameOver || (gameMode === 'multiplayer' && currentPlayer !== localPlayerNum)) return;
+    // Prevent input if game is over
+    if (gameOver) return;
+
+    // Prevent input if it's not the local player's turn in multiplayer
+    if (gameMode === 'multiplayer' && currentPlayer !== localPlayerNum) return;
+
+    // Prevent input if it's not the human's turn in AI mode
+    if (gameMode === 'ai' && currentPlayer !== 1) return;
+
     if (!boardMesh) return; 
     const rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;

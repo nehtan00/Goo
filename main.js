@@ -771,6 +771,12 @@ async function joinMultiplayerGame(gameId) {
             return;
         }
         const gameData = docSnap.data();
+        if (!gameData || !gameData.player1) {
+            updateStatusText("Game data incomplete or corrupted.");
+            resetGame();
+            removeActiveGameId();
+            return;
+        }
         if (gameData.player2 && gameData.player2.uid !== auth.currentUser.uid) {
             alert("Game is full.");
             return;
@@ -784,27 +790,19 @@ async function joinMultiplayerGame(gameId) {
             closeModal(joinGameModal);
             return;
         }
-        localPlayerNum = 2;
-
-        // Show Player 2 setup modal
-        openModal(player2SetupModal);
-
-        // Remove previous listeners to avoid stacking
-        const newConfirmBtn = confirmJoinGameButton.cloneNode(true);
-        confirmJoinGameButton.parentNode.replaceChild(newConfirmBtn, confirmJoinGameButton);
-        confirmJoinGameButton = newConfirmBtn;
-
-        confirmJoinGameButton.onclick = async () => {
-            player2Settings.uid = auth.currentUser.uid;
-            player2Settings.color = player2ColorInput.value;
-            player2Settings.piece = player2PieceSelect.value;
-            await updateDoc(gameDocRef, { player2: player2Settings, status: 'active' });
+        if (gameData.player2 && gameData.player2.uid === auth.currentUser.uid) {
+            // Allow player2 to rejoin/manage their own game!
+            localPlayerNum = 2;
             activeGameId = gameId;
             addActiveGameId(activeGameId);
             listenToGameUpdates(activeGameId);
-            closeModal(player2SetupModal);
             closeModal(joinGameModal);
-        };
+            return;
+        }
+        if (gameData.player2) {
+            alert("Game is full.");
+            return;
+        }
     } catch (error) {
         alert("Failed to join game: " + error.message);
         console.error("Error joining game:", error);

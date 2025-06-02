@@ -139,12 +139,20 @@ function initEventListeners() { /* ... unchanged ... */
     });
     console.log("main.js: initEventListeners() FINISHED.");
 }
-function waitForAuthAndSetupUI() { /* ... unchanged ... */ 
+function waitForAuthAndSetupUI() {
     console.log("main.js: waitForAuthAndSetupUI() CALLED.");
-    if (typeof auth !== 'undefined' && auth) { 
+    if (typeof auth !== 'undefined' && auth) {
+        if (createMultGameButton) createMultGameButton.disabled = true;
         auth.onAuthStateChanged(user => {
-            if (user) { player1Settings.uid = user.uid; checkUrlForGameToJoin(); console.log("main.js: User authenticated, UID:", user.uid); } 
-            else { console.log("main.js: User is signed out or anonymous sign-in pending in onAuthStateChanged."); }
+            if (user) {
+                player1Settings.uid = user.uid;
+                if (createMultGameButton) createMultGameButton.disabled = false;
+                checkUrlForGameToJoin();
+                console.log("main.js: User authenticated, UID:", user.uid);
+            } else {
+                if (createMultGameButton) createMultGameButton.disabled = true;
+                console.log("main.js: User is signed out or anonymous sign-in pending in onAuthStateChanged.");
+            }
         });
     } else {
         console.error("main.js: Firebase Auth object (auth) not available globally. Check firebase.js loading order and initialization.");

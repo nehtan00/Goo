@@ -470,21 +470,39 @@ activeGameId = gameRef.id;
         console.error("Data that caused error in createMultiplayerGame:", newGameData);
     }
 }
-async function joinMultiplayerGame(gameId) { /* ... unchanged ... */ 
-    if (!auth || !auth.currentUser) { console.error("Auth not ready for joinMultiplayerGame"); return;}
-    resetGame(); const gameRef = db.collection('games').doc(gameId);
+async function joinMultiplayerGame(gameId) {
+    if (!auth || !auth.currentUser) {
+        console.error("Auth not ready for joinMultiplayerGame");
+        return;
+    }
+    resetGame();
+    const gameDocRef = doc(db, 'games', gameId); // <-- MODULAR API
     try {
-        const docSnap = await getDoc(gameRef);
-if (!docSnap.exists()) { alert("Game not found."); return; }
-const gameData = docSnap.data();
-if (gameData.player2 && gameData.player2.uid !== auth.currentUser.uid) { alert("Game is full."); return; }
-if (gameData.player1.uid === auth.currentUser.uid) { alert("Cannot join your own game."); return; }
-localPlayerNum = 2; player2Settings.uid = auth.currentUser.uid;
-player2Settings.color = gameData.player1.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
-player2Settings.piece = playerPieceSelect.value; 
-await updateDoc(gameDocRef, { player2: player2Settings, status: 'active' });
-activeGameId = gameId; listenToGameUpdates(activeGameId); closeModal(joinGameModal);
-    } catch (error) { console.error("Error joining game:", error); }
+        const docSnap = await getDoc(gameDocRef);
+        if (!docSnap.exists()) {
+            alert("Game not found.");
+            return;
+        }
+        const gameData = docSnap.data();
+        if (gameData.player2 && gameData.player2.uid !== auth.currentUser.uid) {
+            alert("Game is full.");
+            return;
+        }
+        if (gameData.player1.uid === auth.currentUser.uid) {
+            alert("Cannot join your own game.");
+            return;
+        }
+        localPlayerNum = 2;
+        player2Settings.uid = auth.currentUser.uid;
+        player2Settings.color = gameData.player1.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
+        player2Settings.piece = playerPieceSelect.value;
+        await updateDoc(gameDocRef, { player2: player2Settings, status: 'active' });
+        activeGameId = gameId;
+        listenToGameUpdates(activeGameId);
+        closeModal(joinGameModal);
+    } catch (error) {
+        console.error("Error joining game:", error);
+    }
 }
 function listenToGameUpdates(gameId) { /* ... with boardString parsing ... */
     if (unsubscribeGameListener) unsubscribeGameListener();

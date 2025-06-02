@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'; 
-import { collection, addDoc, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, onSnapshot, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 console.log("main.js: SCRIPT EXECUTION STARTED (TOP OF FILE).");
 
@@ -169,51 +169,49 @@ function initThreeJS() {
     console.log("main.js: initThreeJS() CALLED.");
     if (!gameContainer) { console.error("main.js: gameContainer not found for Three.js."); return; }
     gameContainer.innerHTML = ''; stoneModels = {};
-    scene = new THREE.Scene(); scene.background = new THREE.Color(0xdddddd); 
+    scene = new THREE.Scene(); scene.background = new THREE.Color(0xf7efe6); // Warmer, candle-lit background
+
     camera = new THREE.PerspectiveCamera(45, gameContainer.clientWidth / gameContainer.clientHeight, 0.1, 1000);
-    camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.6, BOARD_SIZE * 1.4); 
+    camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.6, BOARD_SIZE * 1.4);
+
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
-    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.8; // Your current exposure setting
+    renderer.toneMappingExposure = 1.1; // Slightly brighter to let marble color show
     renderer.outputEncoding = THREE.sRGBEncoding;
     gameContainer.appendChild(renderer.domElement);
-    controls = new OrbitControls(camera, renderer.domElement); 
-    controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2); controls.enableDamping = true;
-    controls.dampingFactor = 0.05; controls.minDistance = BOARD_SIZE * 0.7; controls.maxDistance = BOARD_SIZE * 2.5;
-    controls.maxPolarAngle = Math.PI / 2 - 0.02; 
-    
-    // Your Candlelight Color Setup
-    const candlelight = 0xffd580; 
-    const groundColor = 0x402808; 
-    const hemiLight = new THREE.HemisphereLight(candlelight, groundColor, 1.2); 
-    hemiLight.position.set(0, 20, 0); 
-    scene.add(hemiLight);
-    
-    const dirLight = new THREE.DirectionalLight(candlelight, 0.6); 
-    dirLight.position.set(10, 15, 12); 
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048; 
-    dirLight.shadow.mapSize.height = 2048; 
 
-    // ** NEW: Shadow Camera properties for dirLight to expand "beam" **
-    const shadowCamSize = BOARD_SIZE * 2.5; // Adjust this multiplier to change beam size (e.g., 1.5, 2.0, 2.5)
-    dirLight.shadow.camera.near = 0.5;    
-    dirLight.shadow.camera.far = 50;      
-    dirLight.shadow.camera.left = -shadowCamSize / 2;
-    dirLight.shadow.camera.right = shadowCamSize / 2;
-    dirLight.shadow.camera.top = shadowCamSize / 2;
-    dirLight.shadow.camera.bottom = -shadowCamSize / 2;
-    // dirLight.shadow.camera.updateProjectionMatrix(); // Usually not needed if set before first render
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = BOARD_SIZE * 0.7;
+    controls.maxDistance = BOARD_SIZE * 2.5;
+    controls.maxPolarAngle = Math.PI / 2 - 0.02;
 
-    scene.add(dirLight);
+    // --- Candlelight Setup ---
+    const candleColor = 0xffe4b2; // warm candle color
+    const candleIntensity = 2.2;
+    const candleLight = new THREE.PointLight(candleColor, candleIntensity, 30, 2.2);
+    candleLight.position.set(BOARD_SIZE / 2, 7, BOARD_SIZE / 2);
+    candleLight.castShadow = true;
+    candleLight.shadow.mapSize.width = 2048;
+    candleLight.shadow.mapSize.height = 2048;
+    candleLight.shadow.bias = -0.001;
+    scene.add(candleLight);
 
-    const fillLight = new THREE.DirectionalLight(candlelight, 0.8); 
-    fillLight.position.set(-10, 10, -5);
-    scene.add(fillLight);
-    
-    createFloatingGridBoard(); 
+    // Soft ambient fill to avoid harsh shadows, but keep it subtle
+    const ambient = new THREE.AmbientLight(0xffe4b2, 0.22);
+    scene.add(ambient);
+
+    // Remove or reduce hemisphere and directional lights to let marble color show
+    // (If you want a faint hemisphere for subtle fill, keep it very low)
+    // const hemiLight = new THREE.HemisphereLight(0xffe4b2, 0x402808, 0.08);
+    // scene.add(hemiLight);
+
+    createFloatingGridBoard();
     raycaster = new THREE.Raycaster(); mouse = new THREE.Vector2();
     if (gameContainer) gameContainer.addEventListener('click', onBoardClick, false);
     animate();
@@ -422,7 +420,7 @@ async function createMultiplayerGame() {
         boardString: JSON.stringify(board), 
         captures, currentPlayer: 1, status: 'waiting', 
         consecutivePasses: 0, koState: koState, 
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: serverTimestamp()
     };
     try {
         const gamesCollection = collection(db, 'games');
@@ -443,16 +441,16 @@ async function joinMultiplayerGame(gameId) { /* ... unchanged ... */
     if (!auth || !auth.currentUser) { console.error("Auth not ready for joinMultiplayerGame"); return;}
     resetGame(); const gameRef = db.collection('games').doc(gameId);
     try {
-        const doc = await gameRef.get();
-        if (!doc.exists) { alert("Game not found."); return; }
-        const gameData = doc.data();
-        if (gameData.player2 && gameData.player2.uid !== auth.currentUser.uid) { alert("Game is full."); return; }
-        if (gameData.player1.uid === auth.currentUser.uid) { alert("Cannot join your own game."); return; }
-        localPlayerNum = 2; player2Settings.uid = auth.currentUser.uid;
-        player2Settings.color = gameData.player1.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
-        player2Settings.piece = playerPieceSelect.value; 
-        await gameRef.update({ player2: player2Settings, status: 'active' });
-        activeGameId = gameId; listenToGameUpdates(activeGameId); closeModal(joinGameModal);
+        const docSnap = await getDoc(gameRef);
+if (!docSnap.exists()) { alert("Game not found."); return; }
+const gameData = docSnap.data();
+if (gameData.player2 && gameData.player2.uid !== auth.currentUser.uid) { alert("Game is full."); return; }
+if (gameData.player1.uid === auth.currentUser.uid) { alert("Cannot join your own game."); return; }
+localPlayerNum = 2; player2Settings.uid = auth.currentUser.uid;
+player2Settings.color = gameData.player1.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
+player2Settings.piece = playerPieceSelect.value; 
+await updateDoc(gameDocRef, { player2: player2Settings, status: 'active' });
+activeGameId = gameId; listenToGameUpdates(activeGameId); closeModal(joinGameModal);
     } catch (error) { console.error("Error joining game:", error); }
 }
 function listenToGameUpdates(gameId) { /* ... with boardString parsing ... */

@@ -443,8 +443,17 @@ function updateTurnText() { if (gameOver) return; if (!turnText) return; if (gam
 // =================================================================
 // ... (Multiplayer functions with Firebase nested array fix) ...
 async function createMultiplayerGame() {
-    if (!auth || !auth.currentUser) {console.error("Auth not ready for createMultiplayerGame"); return; }
-    resetGame(); gameMode = 'multiplayer'; localPlayerNum = 1; gameOver = false;
+    console.log("createMultiplayerGame called");
+    if (!auth || !auth.currentUser) {
+        console.error("Auth not ready for createMultiplayerGame");
+        return;
+    }
+    console.log("Auth ready:", auth.currentUser.uid);
+    resetGame(); 
+    gameMode = 'multiplayer'; 
+    localPlayerNum = 1; 
+    gameOver = false;
+    console.log("playerColorInput:", playerColorInput, "playerPieceSelect:", playerPieceSelect);
     player1Settings.uid = auth.currentUser.uid;
     player1Settings.color = playerColorInput.value;
     player1Settings.piece = playerPieceSelect.value; 
@@ -455,10 +464,12 @@ async function createMultiplayerGame() {
         consecutivePasses: 0, koState: koState, 
         createdAt: serverTimestamp()
     };
+    console.log("newGameData:", newGameData);
     try {
         const gamesCollection = collection(db, 'games');
-const gameRef = await addDoc(gamesCollection, newGameData);
-activeGameId = gameRef.id;
+        const gameRef = await addDoc(gamesCollection, newGameData);
+        activeGameId = gameRef.id;
+        console.log("Game created with ID:", activeGameId);
         initThreeJS(); updateStatusText("Waiting for opponent..."); closeModal(gameSetupModal);
         const shareCodeDisplay = document.getElementById('share-game-code-display');
         const shareLinkDisplay = document.getElementById('share-game-link-display');

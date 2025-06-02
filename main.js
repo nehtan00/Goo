@@ -600,8 +600,19 @@ function listenToGameUpdates(gameId) {
         player1Settings = gameData.player1; if(gameData.player2) player2Settings = gameData.player2;
         
         sync3DAndUI(); 
-        
-        if (gameData.gameOver) {
+
+        // --- Update status text based on game state ---
+        if (gameData.status === 'waiting') {
+            updateStatusText("Waiting for opponent...");
+        } else if (gameData.status === 'active') {
+            if (localPlayerNum === 1) {
+                updateStatusText("Opponent joined! Your game is ready.");
+            } else if (localPlayerNum === 2) {
+                updateStatusText("Joined game! Your game is ready.");
+            } else {
+                updateStatusText("Game in progress.");
+            }
+        } else if (gameData.gameOver) {
             gameOver = true; endGame();
             if (unsubscribeGameListener) unsubscribeGameListener();
         } else {

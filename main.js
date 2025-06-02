@@ -191,6 +191,12 @@ function initThreeJS() {
     camera = new THREE.PerspectiveCamera(45, gameContainer.clientWidth / gameContainer.clientHeight, 0.1, 1000);
     camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.6, BOARD_SIZE * 1.4);
 
+    // Rotate camera for player 2 in multiplayer
+    if (gameMode === 'multiplayer' && localPlayerNum === 2) {
+        camera.position.set(BOARD_SIZE / 2, BOARD_SIZE * 1.6, -BOARD_SIZE * 1.4);
+        controls.target.set(BOARD_SIZE / 2, 0, BOARD_SIZE / 2);
+        controls.update();
+    }
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
     renderer.shadowMap.enabled = true;

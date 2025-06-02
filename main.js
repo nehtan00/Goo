@@ -65,6 +65,7 @@ let koState = null;
 let player1Settings = { uid: null, color: '#222222', piece: DEFAULT_PIECE_KEY };
 let player2Settings = { uid: null, color: '#FFFFFF', piece: DEFAULT_PIECE_KEY };
 
+let prevBoard = []; // <-- Moved up for global access
 
 // =================================================================
 // Initial Setup
@@ -296,7 +297,9 @@ function drawBoardGridLines() {
 }
 
 
-function addStoneTo3DScene(x, z, player) { 
+const modelCache = {};
+
+function addStoneTo3DScene(x, z, player) {
     const key = `${x}-${z}`; if (stoneModels[key]) return;
     const playerSettings = player === 1 ? player1Settings : player2Settings;
     const pieceDefinition = PIECE_DEFINITIONS[playerSettings.piece] || PIECE_DEFINITIONS[DEFAULT_PIECE_KEY];
@@ -305,9 +308,8 @@ function addStoneTo3DScene(x, z, player) {
     const targetVisualPieceHeight = 0.7;
     const pieceYOnBoard = 0.15;
 
-    const loader = new GLTFLoader(); 
-    loader.load(modelPath, gltf => {
-        const model = gltf.scene; 
+    function placeModel(gltf) {
+        const model = gltf.scene.clone(true);
 
         // --- SCALE TO TARGET HEIGHT ---
         const initialBox = new THREE.Box3().setFromObject(model);
@@ -355,13 +357,24 @@ function addStoneTo3DScene(x, z, player) {
             } else model.position.y = targetY; 
         }
         animateDrop();
-    }, undefined, error => {
-        // ...fallback unchanged...
-    });
+    }
+
+    if (modelCache[modelPath]) {
+        placeModel(modelCache[modelPath]);
+    } else {
+        const loader = new GLTFLoader();
+        loader.load(modelPath, gltf => {
+            modelCache[modelPath] = gltf;
+            placeModel(gltf);
+        }, undefined, error => {
+            // ...fallback unchanged...
+        });
+    }
 }
 
-function removeStoneFrom3DScene(x, z) { /* ... unchanged ... */
-    const key = `${x}-${z}`; const model = stoneModels[key];
+function removeStoneFrom3DScene(x, z) {
+    const key = `${x}-${z}`;
+    const model = stoneModels[key];
     if (model) {
         const duration = 300; const startTime = Date.now();
         const originalScaleX = model.scale.x; const originalScaleY = model.scale.y; const originalScaleZ = model.scale.z; 
@@ -371,13 +384,26 @@ function removeStoneFrom3DScene(x, z) { /* ... unchanged ... */
             const progress = Math.min(elapsedTime / duration, 1); 
             model.position.y = startY + progress * 0.5; 
             model.scale.set(originalScaleX * (1 - progress), originalScaleY * (1 - progress), originalScaleZ * (1 - progress));
-            model.traverse(child => { if (child.isMesh && child.material && child.material.isMeshStandardMaterial) { 
-                if (!child.material.userData) child.material.userData = {}; 
-                if (child.material.userData.originalOpacity === undefined) child.material.userData.originalOpacity = child.material.opacity !== undefined ? child.material.opacity : 1;
-                child.material.transparent = true;
-                child.material.opacity = child.material.userData.originalOpacity * (1 - progress);}});
+            model.traverse(child => { 
+                if (child.isMesh && child.material && child.material.isMeshStandardMaterial) { 
+                    if (!child.material.userData) child.material.userData = {}; 
+                    if (child.material.userData.originalOpacity === undefined) child.material.userData.originalOpacity = child.material.opacity !== undefined ? child.material.opacity : 1;
+                    child.material.transparent = true;
+                    child.material.opacity = child.material.userData.originalOpacity * (1 - progress);
+                }
+            });
             if (progress < 1) requestAnimationFrame(animateCapture);
-            else { scene.remove(model); delete stoneModels[key]; }}
+            else {
+                model.traverse(child => {
+                    if (child.isMesh) {
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) child.material.dispose();
+                    }
+                });
+                scene.remove(model); 
+                delete stoneModels[key];
+            }
+        }
         animateCapture();
     }
 }
@@ -560,14 +586,20 @@ function listenToGameUpdates(gameId) {
         }
     }, error => { console.error("Firebase listener error:", error); updateStatusText("Connection error."); });
 }
-function sync3DAndUI() { /* ... uses global board ... */
-     Object.values(stoneModels).forEach(model => scene.remove(model)); stoneModels = {};
-     for(let r=0; r<BOARD_SIZE; r++) {
-         for(let c=0; c<BOARD_SIZE; c++) {
-             if(board[r][c] !== 0) addStoneTo3DScene(c, r, board[r][c]);
-         }
-     }
-     updateScoreUI();
+function sync3DAndUI() {
+    if (!prevBoard.length) prevBoard = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0));
+    for(let r=0; r<BOARD_SIZE; r++) {
+        for(let c=0; c<BOARD_SIZE; c++) {
+            if (board[r][c] !== prevBoard[r][c]) {
+                // Remove old stone if present
+                if (prevBoard[r][c] !== 0) removeStoneFrom3DScene(c, r);
+                // Add new stone if present
+                if (board[r][c] !== 0) addStoneTo3DScene(c, r, board[r][c]);
+            }
+        }
+    }
+    prevBoard = board.map(row => row.slice());
+    updateScoreUI();
 }
 async function updateGameInFirebase(dataToUpdate) { /* ... with boardString stringification ... */
     if (!activeGameId || !auth || !auth.currentUser) return;

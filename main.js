@@ -563,6 +563,9 @@ function listenToGameUpdates(gameId) {
             initThreeJS();
         }
 
+        // --- CRITICAL: Always set gameMode to 'multiplayer' when listening to a multiplayer game ---
+        gameMode = 'multiplayer';
+
         if (gameData.boardString) {
             try { board = JSON.parse(gameData.boardString); } 
             catch (e) { console.error("Error parsing boardString from Firebase:", e, gameData.boardString); initializeBoardArray(); }

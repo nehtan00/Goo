@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'; 
-import { collection, addDoc, doc, updateDoc, onSnapshot, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, onSnapshot, getDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { db } from './firebase.js';
 
 console.log("main.js: SCRIPT EXECUTION STARTED (TOP OF FILE).");
@@ -42,6 +42,7 @@ let playerColorInput, playerPieceSelect, difficultySelect;
 let startAiGameButton, createMultGameButton, joinGameCodeInput, joinMultGameButton;
 let logoImg; // Add this to your global DOM variables
 let player2SetupModal, player2ColorInput, player2PieceSelect, confirmJoinGameButton;
+let resignGameButton;
 
 // --- Three.js Variables ---
 // ... (declarations remain the same)
@@ -114,6 +115,7 @@ function assignDOMElements() { /* ... unchanged ... */
     player2ColorInput = document.getElementById('player2-color-input');
     player2PieceSelect = document.getElementById('player2-piece-select');
     confirmJoinGameButton = document.getElementById('confirm-join-game-button');
+    resignGameButton = document.getElementById('resign-game-button');
     if (!newGameButton) console.error("main.js: newGameButton NOT FOUND in assignDOMElements!");
     if (!gameContainer) console.error("main.js: gameContainer NOT FOUND in assignDOMElements!");
     if (!startAiGameButton) console.error("main.js: startAiGameButton NOT FOUND in assignDOMElements!");
@@ -152,6 +154,7 @@ function initEventListeners() { /* ... unchanged ... */
         console.log("Logo clicked, restarting game.");
        openModal(gameSetupModal);
     });
+    if (resignGameButton) resignGameButton.addEventListener('click', deleteCurrentGame);
     console.log("main.js: initEventListeners() FINISHED.");
 }
 function waitForAuthAndSetupUI() {
@@ -162,6 +165,7 @@ function waitForAuthAndSetupUI() {
             if (user) {
                 player1Settings.uid = user.uid;
                 if (createMultGameButton) createMultGameButton.disabled = false;
+                tryAutoRejoinGame(); // <-- Add this line
                 checkUrlForGameToJoin();
                 console.log("main.js: User authenticated, UID:", user.uid);
             } else {
@@ -451,7 +455,18 @@ function getAIMove() { let bestScore = -Infinity; let bestMoves = []; const avai
 // Game Flow & UI (Unchanged)
 // =================================================================
 // ... (Game Flow & UI functions unchanged) ...
-function resetGame() { if (unsubscribeGameListener) unsubscribeGameListener(); gameOver = true; activeGameId = null; localPlayerNum = 0; currentPlayer = 1; consecutivePasses = 0; captures = { 1: 0, 2: 0 }; koState = null; initializeBoardArray(); if (scene) Object.values(stoneModels).forEach(model => scene.remove(model)); stoneModels = {}; updateScoreUI(); if(turnText) turnText.textContent = ""; if (passTurnButton) passTurnButton.classList.add('hidden'); else console.error("Pass turn button not found in resetGame"); }
+function resetGame() {
+    if (unsubscribeGameListener) unsubscribeGameListener();
+    gameOver = true; activeGameId = null; localPlayerNum = 0; currentPlayer = 1; consecutivePasses = 0; captures = { 1: 0, 2: 0 }; koState = null;
+    initializeBoardArray();
+    if (scene) Object.values(stoneModels).forEach(model => scene.remove(model));
+    stoneModels = {};
+    updateScoreUI();
+    if(turnText) turnText.textContent = "";
+    if (passTurnButton) passTurnButton.classList.add('hidden'); else console.error("Pass turn button not found in resetGame");
+    if (resignGameButton) resignGameButton.classList.add('hidden');
+    removeActiveGameId(); // <-- Add this line
+}
 function startNewAIGame() {
     console.log("startNewAIGame CALLED");
     resetGame();
@@ -509,6 +524,7 @@ async function createMultiplayerGame() {
         const gamesCollection = collection(db, 'games');
         const gameRef = await addDoc(gamesCollection, newGameData);
         activeGameId = gameRef.id;
+        addActiveGameId(activeGameId); // <-- updated
         console.log("Game created with ID:", activeGameId);
         initThreeJS(); updateStatusText("Waiting for opponent..."); closeModal(gameSetupModal);
         const shareCodeDisplay = document.getElementById('share-game-code-display');
@@ -564,6 +580,7 @@ async function joinMultiplayerGame(gameId) {
             player2Settings.piece = player2PieceSelect.value;
             await updateDoc(gameDocRef, { player2: player2Settings, status: 'active' });
             activeGameId = gameId;
+            addActiveGameId(activeGameId);
             listenToGameUpdates(activeGameId);
             closeModal(player2SetupModal);
             closeModal(joinGameModal);
@@ -577,9 +594,21 @@ function listenToGameUpdates(gameId) {
     if (unsubscribeGameListener) unsubscribeGameListener();
     const gameDocRef = doc(db, 'games', gameId);
     unsubscribeGameListener = onSnapshot(gameDocRef, docSnap => {
-        if (!docSnap.exists) { updateStatusText("Game deleted."); resetGame(); return; }
+        if (!docSnap.exists) {
+            updateStatusText("Game deleted.");
+            resetGame();
+            removeActiveGameId();
+            return;
+        }
         const gameData = docSnap.data();
-
+        // Optionally, check if user is still a participant:
+        const uid = auth.currentUser ? auth.currentUser.uid : null;
+        if (uid && gameData.player1.uid !== uid && (!gameData.player2 || gameData.player2.uid !== uid)) {
+            updateStatusText("You are no longer a participant in this game.");
+            resetGame();
+            removeActiveGameId();
+            return;
+        }
         // --- Ensure 3D scene is initialized before syncing UI ---
         if (!scene || !renderer) {
             initThreeJS();
@@ -620,6 +649,11 @@ function listenToGameUpdates(gameId) {
             if(passTurnButton) passTurnButton.classList.remove('hidden'); 
             updateTurnText();
         }
+        if (gameData.status === 'waiting' || gameData.status === 'active') {
+            if (resignGameButton) resignGameButton.classList.remove('hidden');
+        } else {
+            if (resignGameButton) resignGameButton.classList.add('hidden');
+        }
     }, error => { console.error("Firebase listener error:", error); updateStatusText("Connection error."); });
 }
 function sync3DAndUI() {
@@ -657,5 +691,78 @@ async function updateGameInFirebase(dataToUpdate) { /* ... with boardString stri
 function openModal(modal) { if (modal) modal.classList.remove('hidden'); else console.warn("Attempted to open null modal"); }
 function closeModal(modal) { if (modal) modal.classList.add('hidden'); else console.warn("Attempted to close null modal");}
 function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => alert("Copied!")); }
+
+function tryAutoRejoinGame() {
+    const gameId = getCurrentGameId();
+    if (gameId) {
+        joinMultiplayerGame(gameId);
+    }
+}
+function getActiveGameIds() {
+    try {
+        return JSON.parse(localStorage.getItem('activeGameIds')) || [];
+    } catch {
+        return [];
+    }
+}
+function setActiveGameIds(ids) {
+    localStorage.setItem('activeGameIds', JSON.stringify(ids));
+}
+function addActiveGameId(gameId) {
+    const ids = getActiveGameIds();
+    if (!ids.includes(gameId)) {
+        ids.push(gameId);
+        setActiveGameIds(ids);
+    }
+    setCurrentGameId(gameId);
+}
+function removeActiveGameId(gameId) {
+    let ids = getActiveGameIds();
+    ids = ids.filter(id => id !== gameId);
+    setActiveGameIds(ids);
+    // If the removed game was current, pick another or clear
+    const current = getCurrentGameId();
+    if (current === gameId) {
+        setCurrentGameId(ids[0] || null);
+    }
+}
+function setCurrentGameId(gameId) {
+    if (gameId)
+        localStorage.setItem('currentGameId', gameId);
+    else
+        localStorage.removeItem('currentGameId');
+}
+function getCurrentGameId() {
+    return localStorage.getItem('currentGameId');
+}
+function showGamePicker() {
+    const ids = getActiveGameIds();
+    if (ids.length === 0) {
+        alert("No active games.");
+        return;
+    }
+    const pick = prompt("Enter the number of the game to rejoin:\n" + ids.map((id, i) => `${i+1}: ${id}`).join('\n'));
+    const idx = parseInt(pick, 10) - 1;
+    if (ids[idx]) {
+        setCurrentGameId(ids[idx]);
+        joinMultiplayerGame(ids[idx]);
+    }
+}
+
+async function deleteCurrentGame() {
+    if (!activeGameId) return;
+    if (!confirm("Are you sure you want to resign and delete this game? This cannot be undone.")) return;
+    try {
+        const gameDocRef = doc(db, 'games', activeGameId);
+        await deleteDoc(gameDocRef);
+        removeActiveGameId(activeGameId);
+        resetGame();
+        updateStatusText("Game ended and deleted.");
+        if (resignGameButton) resignGameButton.classList.add('hidden');
+    } catch (error) {
+        alert("Failed to delete game: " + error.message);
+        console.error("Error deleting game:", error);
+    }
+}
 
 console.log("main.js: SCRIPT EXECUTION FINISHED (END OF FILE).");

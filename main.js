@@ -41,6 +41,7 @@ let gameSetupModal, joinGameModal, shareGameModal, rulesStrategyModal;
 let playerColorInput, playerPieceSelect, difficultySelect;
 let startAiGameButton, createMultGameButton, joinGameCodeInput, joinMultGameButton;
 let logoImg; // Add this to your global DOM variables
+let player2SetupModal, player2ColorInput, player2PieceSelect, confirmJoinGameButton;
 
 // --- Three.js Variables ---
 // ... (declarations remain the same)
@@ -109,6 +110,10 @@ function assignDOMElements() { /* ... unchanged ... */
     joinGameCodeInput = document.getElementById('join-game-code-input');
     joinMultGameButton = document.getElementById('join-mult-game-button');
     logoImg = document.getElementById('logo-img');
+    player2SetupModal = document.getElementById('player2-setup-modal');
+    player2ColorInput = document.getElementById('player2-color-input');
+    player2PieceSelect = document.getElementById('player2-piece-select');
+    confirmJoinGameButton = document.getElementById('confirm-join-game-button');
     if (!newGameButton) console.error("main.js: newGameButton NOT FOUND in assignDOMElements!");
     if (!gameContainer) console.error("main.js: gameContainer NOT FOUND in assignDOMElements!");
     if (!startAiGameButton) console.error("main.js: startAiGameButton NOT FOUND in assignDOMElements!");
@@ -522,7 +527,7 @@ async function joinMultiplayerGame(gameId) {
         return;
     }
     resetGame();
-    const gameDocRef = doc(db, 'games', gameId); // <-- MODULAR API
+    const gameDocRef = doc(db, 'games', gameId);
     try {
         const docSnap = await getDoc(gameDocRef);
         if (!docSnap.exists()) {
@@ -539,13 +544,30 @@ async function joinMultiplayerGame(gameId) {
             return;
         }
         localPlayerNum = 2;
-        player2Settings.uid = auth.currentUser.uid;
-        player2Settings.color = gameData.player1.color === '#FFFFFF' ? '#222222' : '#FFFFFF';
-        player2Settings.piece = playerPieceSelect.value;
-        await updateDoc(gameDocRef, { player2: player2Settings, status: 'active' });
-        activeGameId = gameId;
-        listenToGameUpdates(activeGameId);
-        closeModal(joinGameModal);
+
+        // Set default color to opposite of player 1, but allow override
+        if (player2ColorInput) {
+            player2ColorInput.value = (gameData.player1.color === '#FFFFFF') ? '#222222' : '#FFFFFF';
+        }
+
+        // Show Player 2 setup modal
+        openModal(player2SetupModal);
+
+        // Remove previous listeners to avoid stacking
+        const newConfirmBtn = confirmJoinGameButton.cloneNode(true);
+        confirmJoinGameButton.parentNode.replaceChild(newConfirmBtn, confirmJoinGameButton);
+        confirmJoinGameButton = newConfirmBtn;
+
+        confirmJoinGameButton.onclick = async () => {
+            player2Settings.uid = auth.currentUser.uid;
+            player2Settings.color = player2ColorInput.value;
+            player2Settings.piece = player2PieceSelect.value;
+            await updateDoc(gameDocRef, { player2: player2Settings, status: 'active' });
+            activeGameId = gameId;
+            listenToGameUpdates(activeGameId);
+            closeModal(player2SetupModal);
+            closeModal(joinGameModal);
+        };
     } catch (error) {
         alert("Failed to join game: " + error.message);
         console.error("Error joining game:", error);

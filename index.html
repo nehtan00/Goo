@@ -149,6 +149,22 @@ B B B           B . B . B</pre></li><li><strong>4. Cutting Your Opponent's Stone
 . O . O .        . O B O .</pre></li><li><strong>5. Balancing Attack and Defense:</strong> Don't neglect your own groups' safety.</li><li><strong>6. Efficiency:</strong> Make moves that serve multiple purposes.</li></ul><p><em>Go is a journey of continuous learning. Have fun exploring its depths!</em></p></div>
         </div>
     </div>
+    <div id="player2-setup-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-button" data-modal-id="player2-setup-modal">&times;</button>
+            <h2>Join Game - Customize Your Stones</h2>
+            <label for="player2-color-input">Your Color:</label>
+            <input type="color" id="player2-color-input" value="#FFFFFF">
+            <label for="player2-piece-select">Statue:</label>
+            <select id="player2-piece-select">
+                <option value="Achilles">Achilles</option>
+                <option value="War Elephant">Elephant</option>
+                <option value="Valkyrie">Valkyrie</option>
+                <option value="Aztec">Aztec</option>
+            </select>
+            <button id="confirm-join-game-button">Join Game</button>
+        </div>
+    </div>
     
     <!-- Firebase Scripts (remain the same) -->
     <!-- <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>

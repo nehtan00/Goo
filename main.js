@@ -190,7 +190,11 @@ async function checkUrlForGameToJoin() {
             if (docSnap.exists()) {
                 const gameData = docSnap.data();
                 if (auth.currentUser && gameData.player1 && gameData.player1.uid === auth.currentUser.uid) {
-                    // Don't open join modal if user is player1
+                    // Remove ?game=... from the URL for the creator
+                    if (window.history.replaceState) {
+                        const url = window.location.origin + window.location.pathname;
+                        window.history.replaceState({}, document.title, url);
+                    }
                     return;
                 }
             }
@@ -809,7 +813,12 @@ async function createMultiplayerGame() {
         openModal(shareGameModal);
         document.getElementById('share-game-code-display').value = activeGameId;
         document.getElementById('share-game-link-display').value = `${window.location.origin}?game=${activeGameId}`;
-        updateStatusText("Waiting for opponent...");
+
+        // Remove ?game=... from the URL for the creator
+        if (window.history.replaceState) {
+            const url = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, url);
+        }
     } catch (error) {
         alert("Failed to create game: " + error.message);
         console.error("Error creating game:", error);

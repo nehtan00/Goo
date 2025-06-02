@@ -13,7 +13,7 @@ import { db } from './firebase.js';
 console.log("main.js: SCRIPT EXECUTION STARTED (TOP OF FILE).");
 
 // --- Constants ---
-const BOARD_SIZE = 9;
+const BOARD_SIZE = 13;
 
 // **NEW: PIECE DEFINITIONS with individual scale multipliers**
 // You will need to adjust the `scaleMultiplier` for each piece

@@ -191,7 +191,7 @@ function initThreeJS() {
     hemiLight.position.set(0, 20, 0); 
     scene.add(hemiLight);
     
-    const dirLight = new THREE.DirectionalLight(candlelight, 1.2); 
+    const dirLight = new THREE.DirectionalLight(candlelight, 0.6); 
     dirLight.position.set(10, 15, 12); 
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048; 
@@ -209,7 +209,7 @@ function initThreeJS() {
 
     scene.add(dirLight);
 
-    const fillLight = new THREE.DirectionalLight(candlelight, 0.3); 
+    const fillLight = new THREE.DirectionalLight(candlelight, 0.8); 
     fillLight.position.set(-10, 10, -5);
     scene.add(fillLight);
     
@@ -256,7 +256,7 @@ function createFloatingGridBoard() { /* ... PBR texture loading unchanged ... */
 function drawBoardGridLines() {
     // ... (drawBoardGridLines from previous version with corrected span) ...
     const lineThickness = 0.05; 
-    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.9, metalness: 0.9 }); 
+    const gridLineMaterial = new THREE.MeshStandardMaterial({ color: 0x00241B, roughness: 0.1, metalness: 0.9 }); 
     const lineY = 0.001; 
     const gridLinesGroup = new THREE.Group();
     gridLinesGroup.position.y = lineY; 

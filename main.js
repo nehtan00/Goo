@@ -587,11 +587,11 @@ function listenToGameUpdates(gameId) {
     if (unsubscribeGameListener) unsubscribeGameListener();
     const gameDocRef = doc(db, 'games', gameId);
     unsubscribeGameListener = onSnapshot(gameDocRef, docSnap => {
-        if (!docSnap.exists) {
+        if (!docSnap.exists()) {
             updateStatusText("Game deleted.");
             resetGame();
             removeActiveGameId();
-            return;
+            return; // <-- Add this return to prevent further code from running!
         }
         const gameData = docSnap.data();
         // Optionally, check if user is still a participant:

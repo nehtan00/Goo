@@ -188,13 +188,13 @@ function waitForAuthAndSetupUI() {
     }
 }
 async function checkUrlForGameToJoin() {
-    // Wait for auth before trying to join
     if (!auth || !auth.currentUser) {
         console.warn("checkUrlForGameToJoin: auth.currentUser not ready, skipping.");
         return;
     }
     const urlParams = new URLSearchParams(window.location.search);
     const gameIdFromUrl = urlParams.get('game');
+    console.log("Attempting to join game with ID:", gameIdFromUrl);
     if (gameIdFromUrl && joinGameModal && joinGameCodeInput) {
         // Check if the current user is already player1 for this game
         const gameDocRef = doc(db, 'games', gameIdFromUrl);
